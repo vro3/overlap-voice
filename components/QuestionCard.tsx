@@ -280,8 +280,9 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, existingResponse,
                 {/* STATE: ANSWERED / EDITING */}
                 {(status === 'answered' || status === 'editing') && (
                     <div className="flex-1 p-6">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Your Response</div>
                         {status === 'editing' ? (
-                            <textarea 
+                            <textarea
                                 value={transcription}
                                 onChange={(e) => setTranscription(e.target.value)}
                                 className="w-full h-40 bg-background/50 p-4 rounded text-primary border border-border focus:border-orange focus:ring-1 focus:ring-orange/50 outline-none resize-none leading-relaxed"
