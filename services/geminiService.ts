@@ -24,4 +24,22 @@ const processAudioResponse = async (audioBlob: Blob): Promise<GeminiResult> => {
   return result;
 };
 
-export { processAudioResponse };
+const processTextResponse = async (text: string): Promise<GeminiResult> => {
+  const response = await fetch('/api/analyze-text', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ text }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to analyze text");
+  }
+
+  const result = await response.json() as GeminiResult;
+  return result;
+};
+
+export { processAudioResponse, processTextResponse };

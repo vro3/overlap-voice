@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Question, InterviewResponse } from '../types';
-import { processAudioResponse } from '../services/geminiService';
+import { processAudioResponse, processTextResponse } from '../services/geminiService';
 
 interface QuestionCardProps {
   question: Question;
@@ -142,22 +142,32 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, existingResponse,
     }
   };
 
-  const handleTextSubmit = () => {
+  const handleTextSubmit = async () => {
     if (!transcription.trim()) return;
-    
-    // For text input, we don't have a summary from AI immediately (could add a separate call)
-    // For now, we'll just save the text.
-    const newResponse: InterviewResponse = {
+
+    setStatus('processing');
+    try {
+      const result = await processTextResponse(transcription);
+      setSummary(result.summary);
+
+      const newResponse: InterviewResponse = {
         id: existingResponse?.id || crypto.randomUUID(),
         questionId: question.id,
         questionText: question.text,
         timestamp: new Date().toISOString(),
-        transcription: transcription,
-        summary: "Text response submitted.",
+        transcription: result.transcription,
+        summary: result.summary,
+        keyInsight: result.keyInsight,
+        actionItems: result.actionItems,
+        quotable: result.quotable,
         isEdited: true
-    };
-    onSave(newResponse);
-    setStatus('answered');
+      };
+      onSave(newResponse);
+      setStatus('answered');
+    } catch (err) {
+      setErrorMsg("Failed to analyze text. Please try again.");
+      setStatus('empty');
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -296,27 +306,27 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, existingResponse,
                         {/* AI Analysis Section */}
                         {summary && status !== 'editing' && (
                             <div className="mt-8 space-y-4">
-                                {/* Summary */}
+                                {/* The Gist (Summary) */}
                                 <div className="bg-accent-soft/20 border border-accent/10 p-5 rounded-xl">
                                     <div className="text-[10px] font-semibold text-accent uppercase tracking-[0.1em] mb-2.5 flex items-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" /></svg>
-                                        Summary
+                                        The Gist
                                     </div>
                                     <p className="text-[14px] text-secondary leading-relaxed">{summary}</p>
                                 </div>
 
-                                {/* Key Insight */}
+                                {/* What This Means (Key Insight) */}
                                 {existingResponse?.keyInsight && (
                                     <div className="bg-info-soft/30 border border-info/10 p-5 rounded-xl">
-                                        <div className="text-[10px] font-semibold text-info uppercase tracking-[0.1em] mb-2.5">Key Insight</div>
+                                        <div className="text-[10px] font-semibold text-info uppercase tracking-[0.1em] mb-2.5">What This Means</div>
                                         <p className="text-[14px] text-secondary leading-relaxed">{existingResponse.keyInsight}</p>
                                     </div>
                                 )}
 
-                                {/* Action Items */}
+                                {/* To Explore (Action Items) */}
                                 {existingResponse?.actionItems && existingResponse.actionItems.length > 0 && (
                                     <div className="bg-success-soft/30 border border-success/10 p-5 rounded-xl">
-                                        <div className="text-[10px] font-semibold text-success uppercase tracking-[0.1em] mb-2.5">Action Items</div>
+                                        <div className="text-[10px] font-semibold text-success uppercase tracking-[0.1em] mb-2.5">To Explore</div>
                                         <ul className="text-[14px] text-secondary space-y-2">
                                             {existingResponse.actionItems.map((item, i) => (
                                                 <li key={i} className="flex items-start gap-2.5">
@@ -328,10 +338,10 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, existingResponse,
                                     </div>
                                 )}
 
-                                {/* Quotable */}
+                                {/* In Your Words (Quotable) */}
                                 {existingResponse?.quotable && (
                                     <div className="bg-highlight-soft/30 border border-highlight/10 p-5 rounded-xl">
-                                        <div className="text-[10px] font-semibold text-highlight uppercase tracking-[0.1em] mb-2.5">Quotable</div>
+                                        <div className="text-[10px] font-semibold text-highlight uppercase tracking-[0.1em] mb-2.5">In Your Words</div>
                                         <p className="text-[14px] text-secondary italic leading-relaxed">"{existingResponse.quotable}"</p>
                                     </div>
                                 )}

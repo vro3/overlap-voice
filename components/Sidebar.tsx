@@ -13,6 +13,25 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSession, onReset, userEmail, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [workflowExpanded, setWorkflowExpanded] = useState(true);
+  const [insightsExpanded, setInsightsExpanded] = useState(true);
+
+  // Collect all insights from completed responses
+  const allInsights = sessions.flatMap(session =>
+    session.responses
+      .filter(r => r.keyInsight || r.summary)
+      .map(r => ({
+        sessionName: session.name,
+        questionText: r.questionText,
+        summary: r.summary,
+        keyInsight: r.keyInsight,
+        quotable: r.quotable
+      }))
+  );
+
+  const totalQuestions = sessions.reduce((acc, s) => acc + s.questions.length, 0);
+  const completedQuestions = sessions.reduce((acc, s) => acc + s.responses.length, 0);
+  const progressPercent = totalQuestions > 0 ? Math.round((completedQuestions / totalQuestions) * 100) : 0;
 
   const handleExport = () => {
     // Flatten all responses from all sessions
@@ -83,41 +102,133 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
-        <div className="px-3 mb-5">
-          <span className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em]">Your Workflow</span>
-        </div>
-        {sessions.map((session, index) => {
-          const isComplete = session.responses.length === session.questions.length && session.questions.length > 0;
-          const isActive = activeSessionId === session.id;
-
-          return (
-            <button
-              key={session.id}
-              onClick={() => handleSelectSession(session.id)}
-              className={`w-full flex items-center px-3 py-3 text-[13px] rounded-xl transition-all duration-200 group relative ${
-                isActive
-                  ? 'bg-surface text-primary font-medium'
-                  : 'text-secondary hover:text-primary hover:bg-surface-hover'
-              }`}
+      <nav className="flex-1 overflow-y-auto py-4 px-4 space-y-1">
+        {/* Your Workflow Section */}
+        <div className="mb-2">
+          <button
+            onClick={() => setWorkflowExpanded(!workflowExpanded)}
+            className="w-full px-3 py-2 flex items-center justify-between text-muted hover:text-secondary transition-colors rounded-lg hover:bg-surface-hover"
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">Your Workflow</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`h-3.5 w-3.5 transition-transform duration-200 ${workflowExpanded ? '' : '-rotate-90'}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              {isActive && (
-                  <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-accent rounded-full"></div>
-              )}
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
 
-              <div className="flex items-center w-full">
-                  <div className={`w-6 flex-shrink-0 flex items-center justify-center mr-3`}>
-                     {isComplete ? (
-                         <svg className="w-4 h-4 text-success" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                     ) : (
-                         <span className={`text-[10px] font-mono ${isActive ? 'text-accent' : 'text-muted'}`}>{(index + 1).toString().padStart(2, '0')}</span>
-                     )}
+        {workflowExpanded && (
+          <div className="space-y-1 mb-6">
+            {sessions.map((session, index) => {
+              const isComplete = session.responses.length === session.questions.length && session.questions.length > 0;
+              const isActive = activeSessionId === session.id;
+
+              return (
+                <button
+                  key={session.id}
+                  onClick={() => handleSelectSession(session.id)}
+                  className={`w-full flex items-center px-3 py-3 text-[13px] rounded-xl transition-all duration-200 group relative ${
+                    isActive
+                      ? 'bg-surface text-primary font-medium'
+                      : 'text-secondary hover:text-primary hover:bg-surface-hover'
+                  }`}
+                >
+                  {isActive && (
+                      <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-accent rounded-full"></div>
+                  )}
+
+                  <div className="flex items-center w-full">
+                      <div className={`w-6 flex-shrink-0 flex items-center justify-center mr-3`}>
+                         {isComplete ? (
+                             <svg className="w-4 h-4 text-success" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                         ) : (
+                             <span className={`text-[10px] font-mono ${isActive ? 'text-accent' : 'text-muted'}`}>{(index + 1).toString().padStart(2, '0')}</span>
+                         )}
+                      </div>
+                      <span className="truncate">{session.name}</span>
                   </div>
-                  <span className="truncate">{session.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Divider */}
+        <div className="border-t border-border-subtle my-4"></div>
+
+        {/* Your Results Section */}
+        <div className="mb-2">
+          <button
+            onClick={() => setInsightsExpanded(!insightsExpanded)}
+            className="w-full px-3 py-2 flex items-center justify-between text-muted hover:text-secondary transition-colors rounded-lg hover:bg-surface-hover"
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em]">Your Results</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`h-3.5 w-3.5 transition-transform duration-200 ${insightsExpanded ? '' : '-rotate-90'}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+
+        {insightsExpanded && (
+          <div className="space-y-3 px-3">
+            {/* Progress */}
+            <div className="bg-surface rounded-xl p-4 border border-border-subtle">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] text-muted">Progress</span>
+                <span className="text-[11px] font-medium text-primary">{progressPercent}%</span>
               </div>
-            </button>
-          );
-        })}
+              <div className="h-1.5 bg-background rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-accent rounded-full transition-all duration-500"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <div className="mt-2 text-[10px] text-muted">
+                {completedQuestions} of {totalQuestions} questions
+              </div>
+            </div>
+
+            {/* Recent Insights */}
+            {allInsights.length > 0 ? (
+              <div className="space-y-2">
+                <div className="text-[10px] text-muted px-1">Recent Insights</div>
+                {allInsights.slice(-3).reverse().map((insight, i) => (
+                  <div key={i} className="bg-surface rounded-lg p-3 border border-border-subtle">
+                    <div className="text-[10px] text-accent mb-1 truncate">{insight.sessionName}</div>
+                    <p className="text-[11px] text-secondary line-clamp-2 leading-relaxed">
+                      {insight.keyInsight || insight.summary}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[11px] text-muted text-center py-4 px-3">
+                Complete questions to see your insights here
+              </div>
+            )}
+
+            {/* Quotables Preview */}
+            {allInsights.filter(i => i.quotable).length > 0 && (
+              <div className="bg-highlight-soft/20 rounded-lg p-3 border border-highlight/10">
+                <div className="text-[10px] text-highlight mb-2">In Your Words</div>
+                <p className="text-[11px] text-secondary italic line-clamp-2">
+                  "{allInsights.filter(i => i.quotable)[0]?.quotable}"
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* Footer */}
