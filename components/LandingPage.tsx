@@ -129,7 +129,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, isLoading }) => {
         <p className="text-xs text-gray-600">
           Everything auto-saves. Come back anytime with the same email.
         </p>
-        <p className="text-xs text-gray-700 mt-2">v1.0.3</p>
+        <p className="text-xs text-gray-700 mt-2">v1.0.4</p>
       </div>
     </div>
   );
