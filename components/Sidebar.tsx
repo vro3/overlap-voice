@@ -130,7 +130,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
         </div>
 
         {workflowExpanded && (
-          <div className="space-y-1 mb-6">
+          <div className="space-y-0.5 mb-3">
             {sessions.map((session, index) => {
               const isComplete = session.responses.length === session.questions.length && session.questions.length > 0;
               const isActive = activeSessionId === session.id && !showFeedback;
@@ -139,14 +139,14 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
                 <button
                   key={session.id}
                   onClick={() => handleSelectSession(session.id)}
-                  className={`w-full flex items-center px-3 py-3 text-[13px] rounded-xl transition-all duration-200 group relative ${
+                  className={`w-full flex items-center px-3 py-2 text-[12px] rounded-lg transition-all duration-200 group relative ${
                     isActive
                       ? 'bg-surface text-primary font-medium'
                       : 'text-secondary hover:text-primary hover:bg-surface-hover'
                   }`}
                 >
                   {isActive && (
-                      <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-accent rounded-full"></div>
+                      <div className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-accent rounded-full"></div>
                   )}
 
                   <div className="flex items-center w-full">
@@ -166,7 +166,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
         )}
 
         {/* Divider */}
-        <div className="border-t border-border-subtle my-4"></div>
+        <div className="border-t border-border-subtle my-2"></div>
 
         {/* Your Results Section */}
         <div className="mb-2">
