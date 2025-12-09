@@ -1,0 +1,7 @@
+{
+  "name": "Gemini Interviewer",
+  "description": "An automated voice interview system that records user responses, uses Gemini to transcribe and summarize them, and organizes the data in a dashboard.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
