@@ -125,11 +125,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, isLoading }) => {
       </div>
 
       {/* Footer */}
-      <div className="py-6 text-center border-t border-border">
-        <p className="text-xs text-gray-600">
+      <div className="py-8 text-center border-t border-border-subtle">
+        <p className="text-[12px] text-muted">
           Everything auto-saves. Come back anytime with the same email.
         </p>
-        <p className="text-xs text-gray-700 mt-2">v1.0.4</p>
+        <p className="text-[11px] text-muted/60 mt-2">v1.0.5</p>
       </div>
     </div>
   );
