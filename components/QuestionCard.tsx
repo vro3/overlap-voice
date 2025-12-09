@@ -7,9 +7,10 @@ interface QuestionCardProps {
   existingResponse?: InterviewResponse;
   onSave: (response: InterviewResponse) => void;
   isFirstInSection: boolean;
+  sectionQuestionCount?: number;
 }
 
-const QuestionCard: React.FC<QuestionCardProps> = ({ question, existingResponse, onSave, isFirstInSection }) => {
+const QuestionCard: React.FC<QuestionCardProps> = ({ question, existingResponse, onSave, isFirstInSection, sectionQuestionCount }) => {
   // States
   const [status, setStatus] = useState<'empty' | 'recording' | 'processing' | 'answered' | 'editing'>('empty');
   const [transcription, setTranscription] = useState('');
@@ -172,6 +173,9 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, existingResponse,
       {isFirstInSection && (
         <h3 className="text-sm font-bold text-secondary uppercase tracking-widest mb-4 mt-8 px-1">
           {question.section}
+          {sectionQuestionCount && (
+            <span className="ml-2 text-xs font-normal text-gray-600">({sectionQuestionCount})</span>
+          )}
         </h3>
       )}
 

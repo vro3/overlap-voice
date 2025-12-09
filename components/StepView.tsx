@@ -43,14 +43,17 @@ const StepView: React.FC<StepViewProps> = ({ session, onUpdateResponse, onNextSt
               // Determine if this is the first question of a new section
               const isFirstInSection = index === 0 || q.section !== session.questions[index - 1].section;
               const existingResponse = session.responses.find(r => r.questionId === q.id);
+              // Count questions in this section
+              const sectionQuestionCount = session.questions.filter(sq => sq.section === q.section).length;
 
               return (
-                  <QuestionCard 
+                  <QuestionCard
                     key={q.id}
                     question={q}
                     existingResponse={existingResponse}
                     onSave={onUpdateResponse}
                     isFirstInSection={isFirstInSection}
+                    sectionQuestionCount={isFirstInSection ? sectionQuestionCount : undefined}
                   />
               );
           })}
