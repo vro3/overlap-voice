@@ -9,9 +9,11 @@ interface SidebarProps {
   onReset: () => void;
   userEmail?: string;
   onLogout?: () => void;
+  showFeedback?: boolean;
+  onShowFeedback?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSession, onReset, userEmail, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSession, onReset, userEmail, onLogout, showFeedback, onShowFeedback }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [workflowExpanded, setWorkflowExpanded] = useState(true);
   const [insightsExpanded, setInsightsExpanded] = useState(true);
@@ -60,6 +62,11 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
   const handleSelectSession = (id: string) => {
     onSelectSession(id);
     setIsOpen(false); // Close on mobile after selection
+  };
+
+  const handleShowFeedback = () => {
+    onShowFeedback?.();
+    setIsOpen(false);
   };
 
   return (
@@ -126,7 +133,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
           <div className="space-y-1 mb-6">
             {sessions.map((session, index) => {
               const isComplete = session.responses.length === session.questions.length && session.questions.length > 0;
-              const isActive = activeSessionId === session.id;
+              const isActive = activeSessionId === session.id && !showFeedback;
 
               return (
                 <button
@@ -182,6 +189,27 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
 
         {insightsExpanded && (
           <div className="space-y-3 px-3">
+            {/* Live Feedback Button */}
+            <button
+              onClick={handleShowFeedback}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                showFeedback
+                  ? 'bg-accent/10 border-accent/30 text-accent'
+                  : 'bg-surface border-border-subtle text-primary hover:bg-surface-hover hover:border-border'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              <div className="text-left">
+                <div className="text-[13px] font-medium">Live Feedback</div>
+                <div className="text-[10px] text-muted">Real-time analysis</div>
+              </div>
+              {showFeedback && (
+                <div className="ml-auto w-2 h-2 bg-accent rounded-full animate-pulse"></div>
+              )}
+            </button>
+
             {/* Progress */}
             <div className="bg-surface rounded-xl p-4 border border-border-subtle">
               <div className="flex items-center justify-between mb-2">

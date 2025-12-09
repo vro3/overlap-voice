@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import StepView from './components/StepView';
+import FeedbackView from './components/FeedbackView';
 import LandingPage from './components/LandingPage';
 import { Session, InterviewResponse } from './types';
 import { INITIAL_SESSIONS } from './data/initialData';
@@ -17,6 +18,7 @@ const App: React.FC = () => {
   // Sessions state
   const [sessions, setSessions] = useState<Session[]>(INITIAL_SESSIONS);
   const [activeSessionId, setActiveSessionId] = useState<string>('step-1');
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // Track if we need to save (debounce)
   const saveTimeoutRef = useRef<number | null>(null);
@@ -155,8 +157,24 @@ const App: React.FC = () => {
       const nextIndex = activeSessionIndex + 1;
       if (nextIndex < sessions.length) {
           setActiveSessionId(sessions[nextIndex].id);
+          setShowFeedback(false);
           window.scrollTo({ top: 0, behavior: 'smooth' });
       }
+  };
+
+  const handleSelectSession = (sessionId: string) => {
+    setActiveSessionId(sessionId);
+    setShowFeedback(false);
+  };
+
+  const handleShowFeedback = () => {
+    setShowFeedback(true);
+  };
+
+  const handleNavigateToQuestion = (sessionId: string, _questionId: string) => {
+    setActiveSessionId(sessionId);
+    setShowFeedback(false);
+    // TODO: scroll to specific question
   };
 
   const handleReset = () => {
@@ -194,19 +212,28 @@ const App: React.FC = () => {
       <Sidebar
         sessions={sessions}
         activeSessionId={activeSessionId}
-        onSelectSession={setActiveSessionId}
+        onSelectSession={handleSelectSession}
         onReset={handleReset}
         userEmail={userEmail}
         onLogout={handleLogout}
+        showFeedback={showFeedback}
+        onShowFeedback={handleShowFeedback}
       />
       <main className="flex-1 overflow-x-hidden">
-        <StepView
-            key={activeSession.id}
-            session={activeSession}
-            onUpdateResponse={handleUpdateResponse}
-            onNextStep={handleNextStep}
-            isLastStep={activeSessionIndex === sessions.length - 1}
-        />
+        {showFeedback ? (
+          <FeedbackView
+            sessions={sessions}
+            onNavigateToQuestion={handleNavigateToQuestion}
+          />
+        ) : (
+          <StepView
+              key={activeSession.id}
+              session={activeSession}
+              onUpdateResponse={handleUpdateResponse}
+              onNextStep={handleNextStep}
+              isLastStep={activeSessionIndex === sessions.length - 1}
+          />
+        )}
       </main>
     </div>
   );
