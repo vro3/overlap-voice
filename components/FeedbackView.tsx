@@ -22,12 +22,28 @@ interface FeedbackAnalysis {
     area: string;
     suggestion: string;
     priority: 'high' | 'medium' | 'low';
+    useCase?: string;
     relatedQuestionId?: string;
     relatedSessionId?: string;
   }>;
   strengths: Array<{
     area: string;
     evidence: string;
+    useCase?: string;
+  }>;
+  seoReadiness?: {
+    hasTargetAudience: boolean;
+    hasDifferentiator: boolean;
+    hasPricing: boolean;
+    hasServices: boolean;
+    hasProof: boolean;
+    hasFAQContent: boolean;
+    hasVoice: boolean;
+  };
+  websiteBlocks?: Array<{
+    section: string;
+    status: 'ready' | 'partial' | 'missing';
+    content: string;
   }>;
   nextSteps: string[];
   readiness: {
@@ -134,6 +150,24 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ sessions, onNavigateToQuest
     return 'text-muted';
   };
 
+  const getBlockStatusColor = (status: string) => {
+    switch (status) {
+      case 'ready': return 'bg-success/20 text-success border-success/30';
+      case 'partial': return 'bg-accent/20 text-accent border-accent/30';
+      case 'missing': return 'bg-surface-hover text-muted border-border-subtle';
+      default: return 'bg-surface text-muted border-border-subtle';
+    }
+  };
+
+  const getBlockStatusIcon = (status: string) => {
+    switch (status) {
+      case 'ready': return '✓';
+      case 'partial': return '◐';
+      case 'missing': return '○';
+      default: return '○';
+    }
+  };
+
   // Empty state
   if (allResponses.length === 0) {
     return (
@@ -229,7 +263,7 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ sessions, onNavigateToQuest
           <div className="bg-surface rounded-2xl border border-border-subtle p-8">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <div className="text-[10px] font-semibold text-muted uppercase tracking-[0.1em] mb-2">Positioning Readiness</div>
+                <div className="text-[10px] font-semibold text-muted uppercase tracking-[0.1em] mb-2">Website Readiness</div>
                 <div className={`text-5xl font-display font-bold ${getReadinessColor(analysis.readiness.score)}`}>
                   {analysis.readiness.score}%
                 </div>
@@ -255,6 +289,78 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ sessions, onNavigateToQuest
             <p className="text-secondary text-[15px] leading-relaxed">{analysis.readiness.message}</p>
           </div>
 
+          {/* SEO Readiness Checklist */}
+          {analysis.seoReadiness && (
+            <div className="bg-surface rounded-2xl border border-border-subtle p-8">
+              <div className="text-[10px] font-semibold text-info uppercase tracking-[0.1em] mb-6 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                SEO/AEO Readiness
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { key: 'hasTargetAudience', label: 'Target Audience', desc: 'Persona-targeted content' },
+                  { key: 'hasDifferentiator', label: 'Differentiator', desc: 'Unique value prop for headlines' },
+                  { key: 'hasPricing', label: 'Pricing Info', desc: 'Schema markup ready' },
+                  { key: 'hasServices', label: 'Services Defined', desc: 'Service pages content' },
+                  { key: 'hasProof', label: 'Social Proof', desc: 'Testimonials & case studies' },
+                  { key: 'hasFAQContent', label: 'FAQ Content', desc: 'FAQ schema & AEO' },
+                  { key: 'hasVoice', label: 'Brand Voice', desc: 'Consistent copy tone' },
+                ].map(item => {
+                  const isReady = analysis.seoReadiness?.[item.key as keyof typeof analysis.seoReadiness];
+                  return (
+                    <div
+                      key={item.key}
+                      className={`p-3 rounded-xl border flex items-center gap-3 ${
+                        isReady ? 'bg-success/10 border-success/20' : 'bg-surface-hover border-border-subtle'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                        isReady ? 'bg-success text-white' : 'bg-muted/30 text-muted'
+                      }`}>
+                        {isReady ? '✓' : ''}
+                      </div>
+                      <div>
+                        <div className={`text-[13px] font-medium ${isReady ? 'text-primary' : 'text-muted'}`}>{item.label}</div>
+                        <div className="text-[10px] text-muted">{item.desc}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Website Blocks Status */}
+          {analysis.websiteBlocks && analysis.websiteBlocks.length > 0 && (
+            <div className="bg-surface rounded-2xl border border-border-subtle p-8">
+              <div className="text-[10px] font-semibold text-highlight uppercase tracking-[0.1em] mb-6 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+                Website Sections
+              </div>
+              <div className="space-y-3">
+                {analysis.websiteBlocks.map((block, i) => (
+                  <div key={i} className={`p-4 rounded-xl border ${getBlockStatusColor(block.status)}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-lg">{getBlockStatusIcon(block.status)}</span>
+                      <span className="font-medium capitalize">{block.section}</span>
+                      <span className={`text-[10px] uppercase px-2 py-0.5 rounded ${
+                        block.status === 'ready' ? 'bg-success/20' :
+                        block.status === 'partial' ? 'bg-accent/20' : 'bg-muted/20'
+                      }`}>
+                        {block.status}
+                      </span>
+                    </div>
+                    <p className="text-[13px] text-secondary leading-relaxed pl-8">{block.content}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Gaps / Areas to Elaborate */}
           {analysis.gaps.length > 0 && (
             <div className="bg-surface rounded-2xl border border-border-subtle p-8">
@@ -272,11 +378,16 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ sessions, onNavigateToQuest
                     onClick={() => gap.relatedSessionId && gap.relatedQuestionId && onNavigateToQuestion?.(gap.relatedSessionId, gap.relatedQuestionId)}
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div>
+                      <div className="flex-1">
                         <div className="font-medium text-primary mb-1">{gap.area}</div>
                         <p className="text-[14px] text-secondary leading-relaxed">{gap.suggestion}</p>
+                        {gap.useCase && (
+                          <div className="mt-2 text-[11px] text-muted">
+                            → Needed for: <span className="text-secondary">{gap.useCase}</span>
+                          </div>
+                        )}
                       </div>
-                      <span className={`text-[10px] font-semibold uppercase px-2 py-1 rounded ${
+                      <span className={`text-[10px] font-semibold uppercase px-2 py-1 rounded flex-shrink-0 ${
                         gap.priority === 'high' ? 'bg-danger/20 text-danger' :
                         gap.priority === 'medium' ? 'bg-accent/20 text-accent' :
                         'bg-info/20 text-info'
@@ -290,14 +401,14 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ sessions, onNavigateToQuest
             </div>
           )}
 
-          {/* Emerging Themes */}
+          {/* Keyword Themes */}
           {analysis.themes.length > 0 && (
             <div className="bg-surface rounded-2xl border border-border-subtle p-8">
               <div className="text-[10px] font-semibold text-info uppercase tracking-[0.1em] mb-6 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
-                Emerging Themes
+                Keyword Themes & Messaging
               </div>
               <div className="space-y-4">
                 {analysis.themes.map((theme, i) => (
@@ -315,14 +426,14 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ sessions, onNavigateToQuest
             </div>
           )}
 
-          {/* Strengths */}
+          {/* Strengths - Ready Content */}
           {analysis.strengths.length > 0 && (
             <div className="bg-success-soft/20 rounded-2xl border border-success/10 p-8">
               <div className="text-[10px] font-semibold text-success uppercase tracking-[0.1em] mb-6 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                What's Working
+                Ready for Website
               </div>
               <div className="space-y-4">
                 {analysis.strengths.map((strength, i) => (
@@ -330,7 +441,12 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ sessions, onNavigateToQuest
                     <span className="text-success mt-1">&#10003;</span>
                     <div>
                       <div className="font-medium text-primary">{strength.area}</div>
-                      <p className="text-[14px] text-secondary leading-relaxed mt-1">{strength.evidence}</p>
+                      <p className="text-[14px] text-secondary leading-relaxed mt-1">"{strength.evidence}"</p>
+                      {strength.useCase && (
+                        <div className="mt-2 text-[11px] text-muted">
+                          → Use for: <span className="text-success">{strength.useCase}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -338,14 +454,14 @@ const FeedbackView: React.FC<FeedbackViewProps> = ({ sessions, onNavigateToQuest
             </div>
           )}
 
-          {/* Next Steps */}
+          {/* Next Steps - Unlock Website Sections */}
           {analysis.nextSteps.length > 0 && (
             <div className="bg-accent-soft/20 rounded-2xl border border-accent/10 p-8">
               <div className="text-[10px] font-semibold text-accent uppercase tracking-[0.1em] mb-6 flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
                 </svg>
-                Suggested Next Steps
+                Answer These to Unlock Website Sections
               </div>
               <ul className="space-y-3">
                 {analysis.nextSteps.map((step, i) => (

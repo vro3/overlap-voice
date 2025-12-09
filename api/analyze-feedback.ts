@@ -29,58 +29,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           items: {
             type: Type.OBJECT,
             properties: {
-              name: { type: Type.STRING, description: "Theme name, e.g. 'Speed & Efficiency'" },
+              name: { type: Type.STRING, description: "Theme name that could become a keyword cluster, e.g. 'Speed & Efficiency', 'Premium Quality'" },
               mentions: { type: Type.NUMBER, description: "How many times this theme appears" },
               strength: { type: Type.STRING, description: "One of: strong, emerging, weak" },
-              details: { type: Type.STRING, description: "Brief explanation of this theme in their responses" }
+              details: { type: Type.STRING, description: "How this theme could translate to website messaging or SEO keywords" }
             },
             required: ["name", "mentions", "strength", "details"]
           },
-          description: "Key themes emerging from responses"
+          description: "Key themes that will inform brand messaging and keyword strategy"
         },
         gaps: {
           type: Type.ARRAY,
           items: {
             type: Type.OBJECT,
             properties: {
-              area: { type: Type.STRING, description: "What's missing, e.g. 'Pricing specifics'" },
-              suggestion: { type: Type.STRING, description: "What they should elaborate on, using 'you' language" },
+              area: { type: Type.STRING, description: "What's missing for website/SEO, e.g. 'Service pricing for schema markup', 'Specific outcomes for case studies'" },
+              suggestion: { type: Type.STRING, description: "What they should elaborate on for SEO/AEO/branding purposes, using 'you' language" },
               priority: { type: Type.STRING, description: "One of: high, medium, low" },
+              useCase: { type: Type.STRING, description: "How this info will be used: 'homepage hero', 'service page', 'FAQ schema', 'about page', 'meta description', 'AI answer optimization'" },
               relatedQuestionId: { type: Type.STRING, description: "ID of a related unanswered question if applicable" },
               relatedSessionId: { type: Type.STRING, description: "ID of the session containing the related question" }
             },
-            required: ["area", "suggestion", "priority"]
+            required: ["area", "suggestion", "priority", "useCase"]
           },
-          description: "Areas that need more detail or elaboration"
+          description: "Information gaps that will affect website copy, SEO, or AI answer optimization"
         },
         strengths: {
           type: Type.ARRAY,
           items: {
             type: Type.OBJECT,
             properties: {
-              area: { type: Type.STRING, description: "What they're doing well" },
-              evidence: { type: Type.STRING, description: "Specific example from their responses" }
+              area: { type: Type.STRING, description: "What content is ready for the website" },
+              evidence: { type: Type.STRING, description: "Specific quote or paraphrase that can be used" },
+              useCase: { type: Type.STRING, description: "Where to use it: 'headline', 'testimonial page', 'about section', 'service description', 'FAQ', 'schema markup'" }
             },
-            required: ["area", "evidence"]
+            required: ["area", "evidence", "useCase"]
           },
-          description: "Areas where they've provided strong, clear positioning"
+          description: "Content that's ready to be turned into website copy or structured data"
+        },
+        seoReadiness: {
+          type: Type.OBJECT,
+          properties: {
+            hasTargetAudience: { type: Type.BOOLEAN, description: "Can we write persona-targeted content?" },
+            hasDifferentiator: { type: Type.BOOLEAN, description: "Is there a clear unique value prop for headlines?" },
+            hasPricing: { type: Type.BOOLEAN, description: "Can we add pricing schema markup?" },
+            hasServices: { type: Type.BOOLEAN, description: "Are services defined enough for service pages?" },
+            hasProof: { type: Type.BOOLEAN, description: "Are there testimonials/case studies for trust signals?" },
+            hasFAQContent: { type: Type.BOOLEAN, description: "Is there enough for FAQ schema/AEO?" },
+            hasVoice: { type: Type.BOOLEAN, description: "Is brand voice clear enough for consistent copy?" }
+          },
+          required: ["hasTargetAudience", "hasDifferentiator", "hasPricing", "hasServices", "hasProof", "hasFAQContent", "hasVoice"]
         },
         nextSteps: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
-          description: "3-5 concrete next steps to strengthen their positioning"
+          description: "3-5 specific things to answer that will unlock website/SEO deliverables"
         },
         readiness: {
           type: Type.OBJECT,
           properties: {
-            score: { type: Type.NUMBER, description: "0-100 score for positioning readiness" },
-            label: { type: Type.STRING, description: "e.g. 'Getting Started', 'Making Progress', 'Almost There', 'Ready'" },
-            message: { type: Type.STRING, description: "Personalized message about their current state, using 'you' language" }
+            score: { type: Type.NUMBER, description: "0-100 score for website/SEO readiness" },
+            label: { type: Type.STRING, description: "e.g. 'Gathering Info', 'Building Foundation', 'Almost Ready to Build', 'Ready for Website'" },
+            message: { type: Type.STRING, description: "What we can and can't build yet for their website, using 'you' language" }
           },
           required: ["score", "label", "message"]
+        },
+        websiteBlocks: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              section: { type: Type.STRING, description: "Website section: 'hero', 'services', 'about', 'testimonials', 'faq', 'pricing', 'cta'" },
+              status: { type: Type.STRING, description: "One of: ready, partial, missing" },
+              content: { type: Type.STRING, description: "Draft content if ready, or what's needed if not" }
+            },
+            required: ["section", "status", "content"]
+          },
+          description: "Status of each website section based on collected information"
         }
       },
-      required: ["themes", "gaps", "strengths", "nextSteps", "readiness"]
+      required: ["themes", "gaps", "strengths", "seoReadiness", "nextSteps", "readiness", "websiteBlocks"]
     };
 
     // Build context about completed vs incomplete questions
@@ -103,7 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       contents: {
         parts: [
           {
-            text: `You are a business positioning consultant analyzing a client's interview responses in real-time. Your job is to identify patterns, gaps, and provide actionable feedback to help them articulate their positioning more clearly.
+            text: `You are analyzing client interview responses to determine what we can build for their website, SEO strategy, and AI answer optimization (AEO). The goal is to identify what content is ready to use, what gaps need filling, and what website sections we can create.
 
 PROGRESS CONTEXT:
 ${sessionContext}
@@ -111,41 +139,57 @@ ${sessionContext}
 RESPONSES SO FAR:
 ${responseContext}
 
-ANALYSIS INSTRUCTIONS:
+ANALYSIS INSTRUCTIONS - Focus on SEO/AEO/Website Branding deliverables:
 
-1. THEMES: Identify 2-4 recurring themes across their responses. Look for:
-   - Repeated concepts, values, or differentiators
-   - Consistent language patterns
-   - Underlying beliefs about their work
-   Mark strength as "strong" (3+ clear mentions), "emerging" (2 mentions), or "weak" (1 vague mention)
+1. THEMES: Identify 2-4 themes that will become:
+   - Primary keyword clusters for SEO
+   - Core messaging pillars for the website
+   - Brand voice characteristics
+   Mark strength based on how clearly they've articulated it. Note how it translates to web content.
 
-2. GAPS: Identify 2-4 areas needing elaboration. Look for:
-   - Vague statements that need specifics (e.g., "we're different" without explaining how)
-   - Missing quantifiable details (pricing, timelines, results)
-   - Contradictions or unclear positioning
-   - Important unanswered questions from the list above
-   Use "you" language in suggestions. Prioritize as "high" (critical for positioning), "medium" (would strengthen), "low" (nice to have)
-   If suggesting they answer a specific unanswered question, include its relatedQuestionId and relatedSessionId
+2. GAPS: Identify what's MISSING that we need for specific deliverables:
+   - "Service pricing" → needed for: pricing schema, service pages
+   - "Specific client outcomes" → needed for: case studies, testimonials schema
+   - "Target audience details" → needed for: persona-targeted landing pages
+   - "FAQ-worthy questions" → needed for: FAQ schema, AEO optimization
+   - "Competitor differentiation" → needed for: homepage hero, meta descriptions
+   Use "you" language. Include useCase for each gap (where this info will be used on the website).
+   Priority: high = blocks a major website section, medium = weakens the content, low = nice to have
 
-3. STRENGTHS: Identify 2-3 things they're articulating well. Look for:
-   - Clear, specific statements about their value
-   - Authentic voice and perspective
-   - Concrete examples or results
-   Include a brief quote or paraphrase as evidence
+3. STRENGTHS: What content is READY to turn into website copy?
+   - Quote their actual words when possible
+   - Specify exactly where to use it: 'homepage headline', 'about section', 'service page hero', 'FAQ answer', 'testimonial', 'schema markup'
 
-4. NEXT STEPS: Suggest 3-5 specific actions to strengthen positioning. Be concrete:
-   - "Quantify your typical project timeline" not "Add more specifics"
-   - "Describe your ideal client's budget range" not "Think about pricing"
+4. SEO READINESS: Boolean checklist of what we can build:
+   - hasTargetAudience: Can we write persona-targeted content?
+   - hasDifferentiator: Is there a clear USP for headlines?
+   - hasPricing: Can we add pricing/offer schema?
+   - hasServices: Are services defined for service pages?
+   - hasProof: Do we have testimonials/results for trust signals?
+   - hasFAQContent: Is there FAQ-worthy content for schema/AEO?
+   - hasVoice: Is brand voice clear for consistent copy?
 
-5. READINESS: Score 0-100 based on:
-   - Clarity of who they serve (25 points)
-   - Clarity of what they do differently (25 points)
-   - Specific details and examples (25 points)
-   - Authentic voice/perspective (25 points)
-   Labels: 0-25 "Getting Started", 26-50 "Building Foundation", 51-75 "Making Progress", 76-90 "Almost There", 91-100 "Ready"
-   Message should be encouraging and specific about what would move the needle most.
+5. WEBSITE BLOCKS: For each major section, assess if we can build it:
+   - hero: Do we have headline, subhead, CTA?
+   - services: Are offerings clearly defined?
+   - about: Do we have story, values, personality?
+   - testimonials: Do we have client quotes/results?
+   - faq: Do we have common questions answered?
+   - pricing: Do we have tier/pricing info?
+   - cta: Do we have clear call-to-action language?
+   Status: "ready" (can write now), "partial" (some info), "missing" (need more)
 
-Remember: Use second-person language ("you", "your") throughout. Be specific, not generic. Reference their actual words when possible.`
+6. NEXT STEPS: 3-5 specific questions they should answer to UNLOCK website sections:
+   - "Answer the pricing question so we can build your pricing page"
+   - "Describe a client success story for the testimonials section"
+
+7. READINESS SCORE (0-100) for website-readiness:
+   - 0-25: "Gathering Info" - just started, need more responses
+   - 26-50: "Building Foundation" - have basics, missing key sections
+   - 51-75: "Almost Ready to Build" - can start website, some gaps
+   - 76-100: "Ready for Website" - have enough for full site build
+
+Use second-person ("you", "your"). Be specific about what we CAN and CAN'T build yet.`
           }
         ]
       },
