@@ -335,9 +335,31 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, existingResponse,
 
                         {/* Controls */}
                         <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
-                             <div className="flex items-center gap-2 text-xs text-green-500 font-medium">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                                <span>Saved {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                             <div className="flex items-center gap-4">
+                                {status === 'editing' ? (
+                                    <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+                                        <span>Editing response...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                setStatus('empty');
+                                                setTranscription('');
+                                                setSummary('');
+                                                setInputType('voice');
+                                            }}
+                                            className="flex items-center gap-1 text-sm text-secondary hover:text-orange transition-colors"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                            Re-do
+                                        </button>
+                                        <div className="flex items-center gap-2 text-xs text-green-500 font-medium">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                                            <span>Saved {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                                        </div>
+                                    </>
+                                )}
                              </div>
 
                              <div className="flex gap-3">
