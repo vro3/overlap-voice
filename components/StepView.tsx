@@ -1,6 +1,7 @@
 import React from 'react';
 import { Session, InterviewResponse } from '../types';
 import QuestionCard from './QuestionCard';
+import MediaAnalysisView from './MediaAnalysisView';
 
 interface StepViewProps {
   session: Session;
@@ -13,6 +14,13 @@ const StepView: React.FC<StepViewProps> = ({ session, onUpdateResponse, onNextSt
 
   const completedCount = session.responses.length;
   const totalCount = session.questions.length;
+
+  // Check if this is Section 10 (Custom Questions & Influences)
+  const isSection10 = session.id === 'step-10';
+
+  // Find media library response
+  const mediaLibraryResponse = session.responses.find(r => r.questionId === 'media_library');
+  const hasMediaLibraryAnswer = mediaLibraryResponse && mediaLibraryResponse.transcription;
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-12 pt-16 lg:pt-12 pb-32 animate-fadeIn">
@@ -58,6 +66,17 @@ const StepView: React.FC<StepViewProps> = ({ session, onUpdateResponse, onNextSt
               );
           })}
       </div>
+
+      {/* Media Analysis (only shows in Section 10 if media library answered) */}
+      {isSection10 && hasMediaLibraryAnswer && (
+        <div className="mt-14">
+          <div className="mb-6">
+            <h2 className="text-2xl sm:text-3xl font-display font-bold text-primary mb-2">Your Influence Analysis</h2>
+            <p className="text-secondary">Based on the content you resonate with, here's what we discovered.</p>
+          </div>
+          <MediaAnalysisView mediaLibraryResponse={mediaLibraryResponse!.transcription} />
+        </div>
+      )}
 
       {/* Footer Nav */}
       <div className="flex justify-end pt-8 border-t border-border-subtle mt-14">
