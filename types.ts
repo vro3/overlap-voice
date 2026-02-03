@@ -1,13 +1,15 @@
 export type FieldType = 'short_text' | 'long_text' | 'single_choice' | 'multi_choice';
+export type QuestionTier = 'must-ask' | 'should-ask' | 'optional';
 
 export interface Question {
   id: string;
   text: string;
-  helperText?: string;
+  helperText?: string; // Now called "subtext" in v2.0 - guidance shown beneath question
   section: string; // Grouping within step
   fieldType: FieldType;
   options?: string[]; // For choice types
   order?: number;
+  tier?: QuestionTier; // NEW: Priority tier for question
 }
 
 export interface InterviewResponse {

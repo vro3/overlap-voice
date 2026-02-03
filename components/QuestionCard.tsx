@@ -178,6 +178,33 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, existingResponse,
 
   // --- Render Helpers ---
 
+  // Tier color mapping
+  const getTierColor = (tier?: string) => {
+    switch (tier) {
+      case 'must-ask':
+        return '#C84B4B'; // passion/red
+      case 'should-ask':
+        return '#D97706'; // amber
+      case 'optional':
+        return '#059669'; // green
+      default:
+        return '#9CA3AF'; // muted gray
+    }
+  };
+
+  const getTierLabel = (tier?: string) => {
+    switch (tier) {
+      case 'must-ask':
+        return 'Must-Ask';
+      case 'should-ask':
+        return 'Should-Ask';
+      case 'optional':
+        return 'Optional';
+      default:
+        return '';
+    }
+  };
+
   return (
     <div className="mb-6 last:mb-20">
       {isFirstInSection && (
@@ -198,10 +225,26 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, existingResponse,
         <div className="p-7 md:p-9">
             {/* Question Header */}
             <div className="mb-8">
+                {/* Tier indicator + Question number */}
+                {question.tier && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: getTierColor(question.tier) }}
+                      title={getTierLabel(question.tier)}
+                    />
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+                      {getTierLabel(question.tier)}
+                    </span>
+                  </div>
+                )}
+
                 <h4 className="text-[22px] md:text-[26px] font-display font-medium text-primary mb-3 leading-snug tracking-[-0.01em]">
                     {question.text}
                 </h4>
-                <p className="text-[15px] text-secondary font-normal leading-relaxed">
+
+                {/* Subtext - lighter, smaller, italic guidance */}
+                <p className="text-[14px] text-secondary/70 font-light italic leading-relaxed">
                     {question.helperText}
                 </p>
             </div>

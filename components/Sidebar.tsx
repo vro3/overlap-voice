@@ -35,28 +35,74 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
   const completedQuestions = sessions.reduce((acc, s) => acc + s.responses.length, 0);
   const progressPercent = totalQuestions > 0 ? Math.round((completedQuestions / totalQuestions) * 100) : 0;
 
+  // Calculate tier breakdown
+  const allQuestions = sessions.flatMap(s => s.questions);
+  const mustAskTotal = allQuestions.filter(q => q.tier === 'must-ask').length;
+  const shouldAskTotal = allQuestions.filter(q => q.tier === 'should-ask').length;
+  const optionalTotal = allQuestions.filter(q => q.tier === 'optional').length;
+
+  const completedQuestionIds = new Set(sessions.flatMap(s => s.responses.map(r => r.questionId)));
+  const mustAskCompleted = allQuestions.filter(q => q.tier === 'must-ask' && completedQuestionIds.has(q.id)).length;
+  const shouldAskCompleted = allQuestions.filter(q => q.tier === 'should-ask' && completedQuestionIds.has(q.id)).length;
+  const optionalCompleted = allQuestions.filter(q => q.tier === 'optional' && completedQuestionIds.has(q.id)).length;
+
   const handleExport = () => {
-    // Flatten all responses from all sessions
-    const allResponses: any[] = [];
-    sessions.forEach(session => {
-        session.responses.forEach(res => {
-            const question = session.questions.find(q => q.id === res.questionId);
-            allResponses.push({
-                Step: session.name,
-                Section: question?.section || '',
-                Question: res.questionText,
-                Transcription: res.transcription,
-                Summary: res.summary
-            });
-        });
+    // Build markdown with tier indicators
+    let markdown = `# The Overlap — Completed Questionnaire\n`;
+    markdown += `## ${userEmail || 'Your Business'} | ${new Date().toLocaleDateString()}\n\n`;
+    markdown += `---\n\n`;
+
+    sessions.forEach((session) => {
+      if (session.responses.length === 0) return; // Skip empty sessions
+
+      markdown += `## ${session.name}\n`;
+      markdown += `*${session.subtitle}*\n\n`;
+
+      session.questions.forEach((question) => {
+        const response = session.responses.find(r => r.questionId === question.id);
+        if (!response) return; // Skip unanswered questions
+
+        // Add tier indicator
+        let tierEmoji = '';
+        switch (question.tier) {
+          case 'must-ask':
+            tierEmoji = '🔴';
+            break;
+          case 'should-ask':
+            tierEmoji = '🟡';
+            break;
+          case 'optional':
+            tierEmoji = '🟢';
+            break;
+        }
+
+        markdown += `### ${tierEmoji} ${question.text}\n`;
+        markdown += `${response.transcription}\n\n`;
+
+        // Optional: include AI summary
+        if (response.summary) {
+          markdown += `**AI Summary:** ${response.summary}\n\n`;
+        }
+      });
+
+      markdown += `---\n\n`;
     });
 
-    if (allResponses.length === 0) {
-        alert("No data to export yet.");
-        return;
+    if (sessions.every(s => s.responses.length === 0)) {
+      alert("No data to export yet.");
+      return;
     }
 
-    downloadCsv(allResponses, 'The_Overlap_Export.csv');
+    // Download as markdown file
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'The_Overlap_Export.md');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleSelectSession = (id: string) => {
@@ -225,6 +271,31 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
               <div className="mt-2 text-[10px] text-muted">
                 {completedQuestions} of {totalQuestions} questions
               </div>
+
+              {/* Tier breakdown */}
+              <div className="mt-4 pt-3 border-t border-border-subtle space-y-2">
+                <div className="flex items-center justify-between text-[10px]">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#C84B4B' }} />
+                    <span className="text-muted">Must-Ask</span>
+                  </div>
+                  <span className="text-primary font-medium">{mustAskCompleted}/{mustAskTotal}</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px]">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#D97706' }} />
+                    <span className="text-muted">Should-Ask</span>
+                  </div>
+                  <span className="text-primary font-medium">{shouldAskCompleted}/{shouldAskTotal}</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px]">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#059669' }} />
+                    <span className="text-muted">Optional</span>
+                  </div>
+                  <span className="text-primary font-medium">{optionalCompleted}/{optionalTotal}</span>
+                </div>
+              </div>
             </div>
 
             {/* Recent Insights */}
@@ -274,7 +345,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
             className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 bg-surface border border-border-subtle text-primary text-[13px] font-medium rounded-xl hover:bg-surface-hover transition-all"
          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Export Data
+            Export Markdown
          </button>
 
          <div className="flex gap-2">
