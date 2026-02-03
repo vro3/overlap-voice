@@ -7,7 +7,8 @@ const createQ = (
   section: string,
   tier: QuestionTier,
   fieldType: FieldType = 'long_text',
-  options?: string[]
+  options?: string[],
+  isCustomizable?: boolean
 ): Question => ({
   id,
   text,
@@ -15,7 +16,8 @@ const createQ = (
   section,
   tier,
   fieldType,
-  options
+  options,
+  isCustomizable
 });
 
 export const INITIAL_SESSIONS: Session[] = [
@@ -157,11 +159,11 @@ export const INITIAL_SESSIONS: Session[] = [
     subtitle: 'Your questions + the content that shapes your thinking',
     questions: [
       // Custom Questions (editable)
-      createQ('custom_1', "Custom Question 1", "Edit this question to ask something specific to your business or situation. Then answer it.", "Custom Questions", 'should-ask'),
-      createQ('custom_2', "Custom Question 2", "Edit this question to dig into something unique to your work.", "Custom Questions", 'should-ask'),
-      createQ('custom_3', "Custom Question 3", "Edit this question to explore an area that matters to you.", "Custom Questions", 'should-ask'),
-      createQ('custom_4', "Custom Question 4", "Edit this question to capture something the other sections missed.", "Custom Questions", 'optional'),
-      createQ('custom_5', "Custom Question 5", "Edit this question for any final thoughts or areas you want to document.", "Custom Questions", 'optional'),
+      createQ('custom_1', "Custom Question 1", "Edit this question to ask something specific to your business or situation. Then answer it.", "Custom Questions", 'should-ask', 'long_text', undefined, true),
+      createQ('custom_2', "Custom Question 2", "Edit this question to dig into something unique to your work.", "Custom Questions", 'should-ask', 'long_text', undefined, true),
+      createQ('custom_3', "Custom Question 3", "Edit this question to explore an area that matters to you.", "Custom Questions", 'should-ask', 'long_text', undefined, true),
+      createQ('custom_4', "Custom Question 4", "Edit this question to capture something the other sections missed.", "Custom Questions", 'optional', 'long_text', undefined, true),
+      createQ('custom_5', "Custom Question 5", "Edit this question for any final thoughts or areas you want to document.", "Custom Questions", 'optional', 'long_text', undefined, true),
 
       // Media Library
       createQ('media_library', "What books, podcasts, blogs, or videos do you resonate with?", "List the content that has shaped how you think about your work. Include titles, authors, episodes, or links. We'll analyze these to understand what influences your approach and extract patterns that matter to you. Think: books you recommend to everyone, podcasts you never skip, thought leaders you follow religiously.", "Media & Influences", 'must-ask'),

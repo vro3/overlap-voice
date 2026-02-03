@@ -19,6 +19,11 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, existingResponse,
   const [inputType, setInputType] = useState<'voice' | 'text'>('voice');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Question editing states
+  const [isEditingQuestion, setIsEditingQuestion] = useState(false);
+  const [editedQuestionText, setEditedQuestionText] = useState(question.customText || question.text);
+  const [editedHelperText, setEditedHelperText] = useState(question.customHelperText || question.helperText || '');
+
   // Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
@@ -225,28 +230,98 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, existingResponse,
         <div className="p-7 md:p-9">
             {/* Question Header */}
             <div className="mb-8">
-                {/* Tier indicator + Question number */}
-                {question.tier && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <div
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: getTierColor(question.tier) }}
-                      title={getTierLabel(question.tier)}
-                    />
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
-                      {getTierLabel(question.tier)}
-                    </span>
+                {/* Tier indicator + Edit button */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {question.tier && (
+                      <>
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: getTierColor(question.tier) }}
+                          title={getTierLabel(question.tier)}
+                        />
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
+                          {getTierLabel(question.tier)}
+                        </span>
+                      </>
+                    )}
                   </div>
+
+                  {/* Edit Question button for customizable questions */}
+                  {question.isCustomizable && !isEditingQuestion && (
+                    <button
+                      onClick={() => setIsEditingQuestion(true)}
+                      className="flex items-center gap-1.5 text-[11px] text-accent hover:text-accent/80 transition-colors px-2 py-1 rounded-lg hover:bg-accent/10"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit Question
+                    </button>
+                  )}
+                </div>
+
+                {/* Question text - editable or display */}
+                {isEditingQuestion ? (
+                  <div className="mb-6 space-y-3">
+                    <div>
+                      <label className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em] mb-2 block">
+                        Question Text
+                      </label>
+                      <input
+                        type="text"
+                        value={editedQuestionText}
+                        onChange={(e) => setEditedQuestionText(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg px-4 py-2.5 text-primary text-[16px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none"
+                        placeholder="Enter your custom question..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em] mb-2 block">
+                        Guidance (Optional)
+                      </label>
+                      <textarea
+                        value={editedHelperText}
+                        onChange={(e) => setEditedHelperText(e.target.value)}
+                        className="w-full h-20 bg-background border border-border rounded-lg px-4 py-2.5 text-secondary text-[14px] focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none resize-none"
+                        placeholder="Add context or guidance for this question..."
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          question.customText = editedQuestionText;
+                          question.customHelperText = editedHelperText;
+                          setIsEditingQuestion(false);
+                        }}
+                        className="flex-1 bg-accent text-white text-[13px] font-medium px-4 py-2 rounded-lg hover:bg-accent/90 transition-all"
+                      >
+                        Save Question
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditedQuestionText(question.customText || question.text);
+                          setEditedHelperText(question.customHelperText || question.helperText || '');
+                          setIsEditingQuestion(false);
+                        }}
+                        className="px-4 py-2 text-[13px] text-muted hover:text-primary transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h4 className="text-[22px] md:text-[26px] font-display font-medium text-primary mb-3 leading-snug tracking-[-0.01em]">
+                        {question.customText || question.text}
+                    </h4>
+
+                    {/* Subtext - lighter, smaller, italic guidance */}
+                    <p className="text-[14px] text-secondary/70 font-light italic leading-relaxed">
+                        {question.customHelperText || question.helperText}
+                    </p>
+                  </>
                 )}
-
-                <h4 className="text-[22px] md:text-[26px] font-display font-medium text-primary mb-3 leading-snug tracking-[-0.01em]">
-                    {question.text}
-                </h4>
-
-                {/* Subtext - lighter, smaller, italic guidance */}
-                <p className="text-[14px] text-secondary/70 font-light italic leading-relaxed">
-                    {question.helperText}
-                </p>
             </div>
 
             {/* Interaction Area */}

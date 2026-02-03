@@ -10,6 +10,9 @@ export interface Question {
   options?: string[]; // For choice types
   order?: number;
   tier?: QuestionTier; // NEW: Priority tier for question
+  customText?: string; // User's edited question text (for custom questions)
+  customHelperText?: string; // User's edited subtext (for custom questions)
+  isCustomizable?: boolean; // Whether this question can be edited by user
 }
 
 export interface InterviewResponse {
