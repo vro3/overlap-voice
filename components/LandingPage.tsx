@@ -92,6 +92,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, isLoading }) => {
                 </>
               )}
             </button>
+
+            {/* Skip for now option */}
+            <button
+              type="button"
+              onClick={() => onLogin('guest@theoverlap.app')}
+              disabled={isLoading}
+              className="w-full py-3 bg-transparent text-secondary font-medium text-base rounded-lg hover:bg-surface/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Skip for now
+            </button>
           </form>
 
           {/* Features */}
@@ -129,7 +139,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, isLoading }) => {
         <p className="text-[12px] text-muted">
           Everything auto-saves. Come back anytime with the same email.
         </p>
-        <p className="text-[11px] text-muted/60 mt-2">v1.0.8</p>
+        <p className="text-[11px] text-muted/60 mt-2">v1.0.9</p>
       </div>
     </div>
   );

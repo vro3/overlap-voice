@@ -33,7 +33,7 @@ const App: React.FC = () => {
 
   // Auto-save when sessions change (debounced)
   useEffect(() => {
-    if (!userEmail) return;
+    if (!userEmail || userEmail === 'guest@theoverlap.app') return;
 
     // Create a hash of current state to avoid duplicate saves
     const currentState = JSON.stringify({ sessions, activeSessionId });
@@ -62,6 +62,14 @@ const App: React.FC = () => {
   const loadUserData = async (email: string) => {
     setIsLoading(true);
     try {
+      // Guest mode: Skip database, use fresh initial data
+      if (email === 'guest@theoverlap.app') {
+        setSessions(INITIAL_SESSIONS);
+        setActiveSessionId('step-1');
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch('/api/user/load', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -92,11 +100,14 @@ const App: React.FC = () => {
   };
 
   const saveUserData = async () => {
-    if (!userEmail) return;
+    if (!userEmail || userEmail === 'guest@theoverlap.app') return;
     await saveUserDataDirect(userEmail, sessions, activeSessionId);
   };
 
   const saveUserDataDirect = async (email: string, sessionsData: Session[], activeId: string) => {
+    // Skip saving for guest mode
+    if (email === 'guest@theoverlap.app') return;
+
     try {
       await fetch('/api/user/save', {
         method: 'POST',
