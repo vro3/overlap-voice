@@ -1,18 +1,17 @@
 export type FieldType = 'short_text' | 'long_text' | 'single_choice' | 'multi_choice';
 export type QuestionTier = 'must-ask' | 'should-ask' | 'optional';
+export type InputType = 'textarea' | 'url' | 'url_multi';
 
 export interface Question {
   id: string;
   text: string;
-  helperText?: string; // Now called "subtext" in v2.0 - guidance shown beneath question
-  section: string; // Grouping within step
+  helperText?: string;
+  section: string;
   fieldType: FieldType;
-  options?: string[]; // For choice types
+  inputType: InputType;
+  options?: string[];
   order?: number;
-  tier?: QuestionTier; // NEW: Priority tier for question
-  customText?: string; // User's edited question text (for custom questions)
-  customHelperText?: string; // User's edited subtext (for custom questions)
-  isCustomizable?: boolean; // Whether this question can be edited by user
+  tier?: QuestionTier;
 }
 
 export interface InterviewResponse {
@@ -20,12 +19,13 @@ export interface InterviewResponse {
   questionId: string;
   questionText: string;
   timestamp: string;
-  transcription: string; // The final edited transcription
-  summary: string;
-  keyInsight?: string; // The core belief/insight extracted
-  actionItems?: string[]; // Concrete next steps identified
-  quotable?: string; // A direct quote worth using in materials
-  audioUrl?: string; // Local object URL for playback
+  transcription: string;
+  // AI analysis fields — populated when AI mode is enabled
+  summary?: string;
+  keyInsight?: string;
+  actionItems?: string[];
+  quotable?: string;
+  audioUrl?: string;
   isEdited?: boolean;
 }
 
@@ -43,4 +43,39 @@ export interface GeminiResult {
   keyInsight?: string;
   actionItems?: string[];
   quotable?: string;
+}
+
+export type AppScreen = 'landing' | 'magic-link' | 'router' | 'questions' | 'review' | 'output';
+
+export interface AppSettings {
+  // Features
+  aiAnalysisEnabled: boolean;
+  voiceInputEnabled: boolean;
+  magicLinkEnabled: boolean;
+  routerQuestionEnabled: boolean;
+  reviewScreenEnabled: boolean;
+
+  // Persistence
+  storageMode: 'localStorage' | 'vercelKV';
+  autoSaveEnabled: boolean;
+  autoSaveDebounceMs: number;
+
+  // Display
+  showTierIndicators: boolean;
+  showProgressPercentage: boolean;
+  showAiInsightsInSidebar: boolean;
+
+  // Question Filtering
+  showAllQuestions: boolean;
+  hiddenTiers: QuestionTier[];
+}
+
+export interface SavedProgress {
+  email: string;
+  currentStep: string;
+  currentScreen: AppScreen;
+  routerAnswer: string;
+  answers: Record<string, string>;
+  aiResponses: Record<string, Omit<InterviewResponse, 'id' | 'questionId' | 'questionText' | 'timestamp' | 'transcription'>>;
+  lastSaved: string;
 }

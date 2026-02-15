@@ -1,266 +1,267 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { AppScreen, Session, InterviewResponse } from './types';
+import { INITIAL_SESSIONS, ROUTER_QUESTION } from './data/initialData';
+import { useSettings } from './hooks/useSettings';
+import { useAutoSave } from './hooks/useAutoSave';
+import { generateMarkdown, downloadMarkdown } from './utils/generateMarkdown';
+
+import LandingPage from './components/LandingPage';
+import MagicLink from './components/MagicLink';
+import RouterQuestion from './components/RouterQuestion';
 import Sidebar from './components/Sidebar';
 import StepView from './components/StepView';
-import FeedbackView from './components/FeedbackView';
-import { KnowledgeSearch } from './components/KnowledgeSearch';
-import LandingPage from './components/LandingPage';
-import { Session, InterviewResponse } from './types';
-import { INITIAL_SESSIONS } from './data/initialData';
+import ReviewScreen from './components/ReviewScreen';
+import OutputScreen from './components/OutputScreen';
+import SettingsPanel from './components/SettingsPanel';
 
-const USER_EMAIL_KEY = 'the-overlap-user-email';
+const PROGRESS_KEY = 'overlap_progress';
 
 const App: React.FC = () => {
-  // User authentication state
-  const [userEmail, setUserEmail] = useState<string | null>(() => {
-    return localStorage.getItem(USER_EMAIL_KEY);
-  });
-  const [isLoading, setIsLoading] = useState(false);
+  const { settings, updateSetting, resetSettings } = useSettings();
+  const { saveProgress, loadProgress, clearProgress, showSavedToast } = useAutoSave(settings);
 
-  // Sessions state
-  const [sessions, setSessions] = useState<Session[]>(INITIAL_SESSIONS);
-  const [activeSessionId, setActiveSessionId] = useState<string>('step-1');
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
+  // Screen state
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('landing');
 
-  // Track if we need to save (debounce)
-  const saveTimeoutRef = useRef<number | null>(null);
-  const lastSavedRef = useRef<string>('');
+  // Data state
+  const [sessions] = useState<Session[]>(INITIAL_SESSIONS);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [routerAnswer, setRouterAnswer] = useState('');
+  const [email, setEmail] = useState('');
+  const [activeSessionId, setActiveSessionId] = useState('step-1');
 
-  // Load user data when email is set
+  // UI state
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Load saved progress on mount
   useEffect(() => {
-    if (userEmail) {
-      loadUserData(userEmail);
+    const saved = loadProgress();
+    if (saved) {
+      setEmail(saved.email || '');
+      setAnswers(saved.answers || {});
+      setRouterAnswer(saved.routerAnswer || '');
+      setActiveSessionId(saved.currentStep || 'step-1');
+      // Resume where they left off
+      if (saved.currentScreen && saved.currentScreen !== 'landing') {
+        setCurrentScreen(saved.currentScreen);
+      }
     }
   }, []);
 
-  // Auto-save when sessions change (debounced)
+  // Auto-save on changes
   useEffect(() => {
-    if (!userEmail || userEmail === 'guest@theoverlap.app') return;
+    if (currentScreen === 'landing' || currentScreen === 'magic-link') return;
+    saveProgress({
+      email,
+      currentStep: activeSessionId,
+      currentScreen,
+      routerAnswer,
+      answers,
+      aiResponses: {},
+      lastSaved: new Date().toISOString(),
+    });
+  }, [answers, routerAnswer, activeSessionId, currentScreen, email]);
 
-    // Create a hash of current state to avoid duplicate saves
-    const currentState = JSON.stringify({ sessions, activeSessionId });
-    if (currentState === lastSavedRef.current) return;
+  // --- Navigation Helpers ---
 
-    // Clear existing timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
+  const handleStart = useCallback(() => {
+    if (settings.magicLinkEnabled) {
+      setCurrentScreen('magic-link');
+    } else if (settings.routerQuestionEnabled) {
+      setCurrentScreen('router');
+    } else {
+      setCurrentScreen('questions');
     }
+  }, [settings.magicLinkEnabled, settings.routerQuestionEnabled]);
 
-    // Debounce save by 2 seconds
-    saveTimeoutRef.current = window.setTimeout(() => {
-      saveUserData();
-      lastSavedRef.current = currentState;
-    }, 2000);
-
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [sessions, activeSessionId, userEmail]);
-
-  // --- API Functions ---
-
-  const loadUserData = async (email: string) => {
-    setIsLoading(true);
-    try {
-      // Guest mode: Skip database, use fresh initial data
-      if (email === 'guest@theoverlap.app') {
-        setSessions(INITIAL_SESSIONS);
-        setActiveSessionId('step-1');
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await fetch('/api/user/load', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-
-      const data = await response.json();
-
-      if (data.exists && data.data) {
-        // User has existing data - restore it
-        setSessions(data.data.sessions);
-        setActiveSessionId(data.data.activeSessionId || 'step-1');
-      } else {
-        // New user - use fresh initial data
-        setSessions(INITIAL_SESSIONS);
-        setActiveSessionId('step-1');
-        // Save initial state for new user
-        await saveUserDataDirect(email, INITIAL_SESSIONS, 'step-1');
-      }
-    } catch (error) {
-      console.error('Failed to load user data:', error);
-      // Fallback to initial data on error
-      setSessions(INITIAL_SESSIONS);
-      setActiveSessionId('step-1');
-    } finally {
-      setIsLoading(false);
+  const handleMagicLinkComplete = useCallback((userEmail: string) => {
+    setEmail(userEmail);
+    if (settings.routerQuestionEnabled) {
+      setCurrentScreen('router');
+    } else {
+      setCurrentScreen('questions');
     }
-  };
+  }, [settings.routerQuestionEnabled]);
 
-  const saveUserData = async () => {
-    if (!userEmail || userEmail === 'guest@theoverlap.app') return;
-    await saveUserDataDirect(userEmail, sessions, activeSessionId);
-  };
+  const handleRouterContinue = useCallback(() => {
+    setCurrentScreen('questions');
+  }, []);
 
-  const saveUserDataDirect = async (email: string, sessionsData: Session[], activeId: string) => {
-    // Skip saving for guest mode
-    if (email === 'guest@theoverlap.app') return;
+  const handleAnswerChange = useCallback((questionId: string, value: string) => {
+    setAnswers(prev => ({ ...prev, [questionId]: value }));
+  }, []);
 
-    try {
-      await fetch('/api/user/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          sessions: sessionsData,
-          activeSessionId: activeId
-        })
-      });
-    } catch (error) {
-      console.error('Failed to save user data:', error);
-    }
-  };
-
-  // --- Auth Handlers ---
-
-  const handleLogin = async (email: string) => {
-    setIsLoading(true);
-    setUserEmail(email);
-    localStorage.setItem(USER_EMAIL_KEY, email);
-    await loadUserData(email);
-  };
-
-  const handleLogout = () => {
-    // Save before logging out
-    saveUserData();
-    setUserEmail(null);
-    localStorage.removeItem(USER_EMAIL_KEY);
-    setSessions(INITIAL_SESSIONS);
-    setActiveSessionId('step-1');
-  };
-
-  // --- Session Handlers ---
-
+  // Step navigation
   const activeSessionIndex = sessions.findIndex(s => s.id === activeSessionId);
-  const activeSession = sessions[activeSessionIndex] || sessions[0];
 
-  const handleUpdateResponse = (response: InterviewResponse) => {
-    setSessions(prev => prev.map(session => {
-        if (session.id !== activeSessionId) return session;
-
-        const existingIndex = session.responses.findIndex(r => r.questionId === response.questionId);
-        let newResponses;
-
-        if (existingIndex >= 0) {
-            newResponses = [...session.responses];
-            newResponses[existingIndex] = response;
-        } else {
-            newResponses = [...session.responses, response];
-        }
-
-        return { ...session, responses: newResponses };
-    }));
-  };
-
-  const handleNextStep = () => {
-      const nextIndex = activeSessionIndex + 1;
-      if (nextIndex < sessions.length) {
-          setActiveSessionId(sessions[nextIndex].id);
-          setShowFeedback(false);
-          setShowSearch(false);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleNextStep = useCallback(() => {
+    const nextIndex = activeSessionIndex + 1;
+    if (nextIndex < sessions.length) {
+      setActiveSessionId(sessions[nextIndex].id);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      // Past last step
+      if (settings.reviewScreenEnabled) {
+        setCurrentScreen('review');
+      } else {
+        setCurrentScreen('output');
       }
-  };
+    }
+  }, [activeSessionIndex, sessions, settings.reviewScreenEnabled]);
 
-  const handleSelectSession = (sessionId: string) => {
-    setActiveSessionId(sessionId);
-    setShowFeedback(false);
-    setShowSearch(false);
-  };
+  const handlePrevStep = useCallback(() => {
+    const prevIndex = activeSessionIndex - 1;
+    if (prevIndex >= 0) {
+      setActiveSessionId(sessions[prevIndex].id);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [activeSessionIndex, sessions]);
 
-  const handleShowFeedback = () => {
-    setShowFeedback(true);
-    setShowSearch(false);
-  };
+  const handleSelectSession = useCallback((id: string) => {
+    setActiveSessionId(id);
+    setCurrentScreen('questions');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
-  const handleShowSearch = () => {
-    setShowSearch(true);
-    setShowFeedback(false);
-  };
+  const handleGenerate = useCallback(() => {
+    setCurrentScreen('output');
+  }, []);
 
-  const handleNavigateToQuestion = (sessionId: string, _questionId: string) => {
-    setActiveSessionId(sessionId);
-    setShowFeedback(false);
-    // TODO: scroll to specific question
-  };
+  const handleBackToQuestions = useCallback(() => {
+    setCurrentScreen('questions');
+  }, []);
 
-  const handleReset = () => {
-      if (confirm("Are you sure you want to reset all progress? This cannot be undone.")) {
-          setSessions(INITIAL_SESSIONS);
-          setActiveSessionId('step-1');
-          // Save the reset state
-          if (userEmail) {
-            saveUserDataDirect(userEmail, INITIAL_SESSIONS, 'step-1');
-          }
-      }
-  };
+  const handleBackToReview = useCallback(() => {
+    if (settings.reviewScreenEnabled) {
+      setCurrentScreen('review');
+    } else {
+      setCurrentScreen('questions');
+    }
+  }, [settings.reviewScreenEnabled]);
+
+  const handleExport = useCallback(() => {
+    const md = generateMarkdown(email, sessions, answers, routerAnswer, settings.aiAnalysisEnabled);
+    downloadMarkdown(md, email || 'user');
+  }, [email, sessions, answers, routerAnswer, settings.aiAnalysisEnabled]);
+
+  const handleStartOver = useCallback(() => {
+    setAnswers({});
+    setRouterAnswer('');
+    setActiveSessionId('step-1');
+    setCurrentScreen('landing');
+    clearProgress();
+  }, [clearProgress]);
+
+  const handleLogout = useCallback(() => {
+    setEmail('');
+    setCurrentScreen('landing');
+  }, []);
+
+  const handleClearProgress = useCallback(() => {
+    setAnswers({});
+    setRouterAnswer('');
+    setActiveSessionId('step-1');
+    clearProgress();
+    setCurrentScreen('questions');
+  }, [clearProgress]);
 
   // --- Render ---
 
-  // Show landing page if not logged in
-  if (!userEmail) {
-    return <LandingPage onLogin={handleLogin} isLoading={isLoading} />;
-  }
-
-  // Show loading state while fetching user data
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-surface border-t-orange rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-secondary">Loading your progress...</p>
-        </div>
-      </div>
-    );
-  }
+  const activeSession = sessions[activeSessionIndex] || sessions[0];
 
   return (
-    <div className="flex min-h-screen bg-background text-primary">
-      <Sidebar
-        sessions={sessions}
-        activeSessionId={activeSessionId}
-        onSelectSession={handleSelectSession}
-        onReset={handleReset}
-        userEmail={userEmail}
-        onLogout={handleLogout}
-        showFeedback={showFeedback}
-        onShowFeedback={handleShowFeedback}
-        showSearch={showSearch}
-        onShowSearch={handleShowSearch}
-      />
-      <main className="flex-1 overflow-x-hidden">
-        {showSearch ? (
-          <KnowledgeSearch />
-        ) : showFeedback ? (
-          <FeedbackView
+    <>
+      {/* Settings Panel (overlay, any screen) */}
+      {showSettings && (
+        <SettingsPanel
+          settings={settings}
+          onUpdate={updateSetting}
+          onReset={resetSettings}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {/* Save toast */}
+      {showSavedToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-surface border border-border-subtle px-4 py-2.5 rounded-xl shadow-soft text-[13px] text-success animate-fadeIn">
+          Progress saved
+        </div>
+      )}
+
+      {/* Screens */}
+      {currentScreen === 'landing' && (
+        <LandingPage
+          onStart={handleStart}
+          onOpenSettings={() => setShowSettings(true)}
+        />
+      )}
+
+      {currentScreen === 'magic-link' && (
+        <MagicLink onComplete={handleMagicLinkComplete} />
+      )}
+
+      {currentScreen === 'router' && (
+        <RouterQuestion
+          value={routerAnswer}
+          onChange={setRouterAnswer}
+          onContinue={handleRouterContinue}
+          settings={settings}
+        />
+      )}
+
+      {currentScreen === 'questions' && (
+        <div className="flex min-h-screen bg-background text-primary">
+          <Sidebar
             sessions={sessions}
-            onNavigateToQuestion={handleNavigateToQuestion}
+            activeSessionId={activeSessionId}
+            onSelectSession={handleSelectSession}
+            answers={answers}
+            settings={settings}
+            userEmail={email || undefined}
+            onLogout={email ? handleLogout : undefined}
+            onOpenSettings={() => setShowSettings(true)}
+            onExport={handleExport}
           />
-        ) : (
-          <StepView
+          <main className="flex-1 overflow-x-hidden">
+            <StepView
               key={activeSession.id}
               session={activeSession}
-              onUpdateResponse={handleUpdateResponse}
+              stepIndex={activeSessionIndex}
+              totalSteps={sessions.length}
+              answers={answers}
+              onAnswerChange={handleAnswerChange}
+              settings={settings}
               onNextStep={handleNextStep}
+              onPrevStep={handlePrevStep}
+              isFirstStep={activeSessionIndex === 0}
               isLastStep={activeSessionIndex === sessions.length - 1}
-          />
-        )}
-      </main>
-    </div>
+            />
+          </main>
+        </div>
+      )}
+
+      {currentScreen === 'review' && (
+        <ReviewScreen
+          sessions={sessions}
+          answers={answers}
+          routerAnswer={routerAnswer}
+          onEditAnswer={handleAnswerChange}
+          onGenerate={handleGenerate}
+          onBack={handleBackToQuestions}
+        />
+      )}
+
+      {currentScreen === 'output' && (
+        <OutputScreen
+          email={email || 'user'}
+          sessions={sessions}
+          answers={answers}
+          routerAnswer={routerAnswer}
+          aiEnabled={settings.aiAnalysisEnabled}
+          onStartOver={handleStartOver}
+        />
+      )}
+    </>
   );
 };
 
