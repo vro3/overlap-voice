@@ -11,9 +11,11 @@ interface SidebarProps {
   onLogout?: () => void;
   showFeedback?: boolean;
   onShowFeedback?: () => void;
+  showSearch?: boolean;
+  onShowSearch?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSession, onReset, userEmail, onLogout, showFeedback, onShowFeedback }) => {
+const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSession, onReset, userEmail, onLogout, showFeedback, onShowFeedback, showSearch, onShowSearch }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [workflowExpanded, setWorkflowExpanded] = useState(true);
   const [insightsExpanded, setInsightsExpanded] = useState(true);
@@ -115,6 +117,11 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
     setIsOpen(false);
   };
 
+  const handleShowSearch = () => {
+    onShowSearch?.();
+    setIsOpen(false);
+  };
+
   return (
     <>
       {/* Mobile Menu Button */}
@@ -179,7 +186,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
           <div className="space-y-0.5 mb-3">
             {sessions.map((session, index) => {
               const isComplete = session.responses.length === session.questions.length && session.questions.length > 0;
-              const isActive = activeSessionId === session.id && !showFeedback;
+              const isActive = activeSessionId === session.id && !showFeedback && !showSearch;
 
               return (
                 <button
@@ -252,6 +259,27 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSessionId, onSelectSe
                 <div className="text-[10px] text-muted">Real-time analysis</div>
               </div>
               {showFeedback && (
+                <div className="ml-auto w-2 h-2 bg-accent rounded-full animate-pulse"></div>
+              )}
+            </button>
+
+            {/* Knowledge Search Button */}
+            <button
+              onClick={handleShowSearch}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                showSearch
+                  ? 'bg-accent/10 border-accent/30 text-accent'
+                  : 'bg-surface border-border-subtle text-primary hover:bg-surface-hover hover:border-border'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              <div className="text-left">
+                <div className="text-[13px] font-medium">Knowledge Search</div>
+                <div className="text-[10px] text-muted">Search your knowledge base</div>
+              </div>
+              {showSearch && (
                 <div className="ml-auto w-2 h-2 bg-accent rounded-full animate-pulse"></div>
               )}
             </button>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import StepView from './components/StepView';
 import FeedbackView from './components/FeedbackView';
+import { KnowledgeSearch } from './components/KnowledgeSearch';
 import LandingPage from './components/LandingPage';
 import { Session, InterviewResponse } from './types';
 import { INITIAL_SESSIONS } from './data/initialData';
@@ -19,6 +20,7 @@ const App: React.FC = () => {
   const [sessions, setSessions] = useState<Session[]>(INITIAL_SESSIONS);
   const [activeSessionId, setActiveSessionId] = useState<string>('step-1');
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
 
   // Track if we need to save (debounce)
   const saveTimeoutRef = useRef<number | null>(null);
@@ -169,6 +171,7 @@ const App: React.FC = () => {
       if (nextIndex < sessions.length) {
           setActiveSessionId(sessions[nextIndex].id);
           setShowFeedback(false);
+          setShowSearch(false);
           window.scrollTo({ top: 0, behavior: 'smooth' });
       }
   };
@@ -176,10 +179,17 @@ const App: React.FC = () => {
   const handleSelectSession = (sessionId: string) => {
     setActiveSessionId(sessionId);
     setShowFeedback(false);
+    setShowSearch(false);
   };
 
   const handleShowFeedback = () => {
     setShowFeedback(true);
+    setShowSearch(false);
+  };
+
+  const handleShowSearch = () => {
+    setShowSearch(true);
+    setShowFeedback(false);
   };
 
   const handleNavigateToQuestion = (sessionId: string, _questionId: string) => {
@@ -229,9 +239,13 @@ const App: React.FC = () => {
         onLogout={handleLogout}
         showFeedback={showFeedback}
         onShowFeedback={handleShowFeedback}
+        showSearch={showSearch}
+        onShowSearch={handleShowSearch}
       />
       <main className="flex-1 overflow-x-hidden">
-        {showFeedback ? (
+        {showSearch ? (
+          <KnowledgeSearch />
+        ) : showFeedback ? (
           <FeedbackView
             sessions={sessions}
             onNavigateToQuestion={handleNavigateToQuestion}
