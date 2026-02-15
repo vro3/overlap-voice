@@ -1,9 +1,14 @@
-// search.ts — v1.0.0 — 2026-02-14
+// search.ts — v1.1.0 — 2026-02-15
 // Searches chunked knowledge base using keyword matching + Gemini answer generation
 
 import { GoogleGenAI } from '@google/genai';
-import { kv } from '@vercel/kv';
+import { createClient } from '@vercel/kv';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+const kv = createClient({
+  url: process.env.STORAGE_REST_API_URL!,
+  token: process.env.STORAGE_REST_API_TOKEN!,
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -20,27 +25,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'query required' });
   }
 
+  const sanitizedQuery = query.replace(/[<>{}[\]\\\/]/g, '').slice(0, 500);
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 5), 20);
+
   try {
     // 1. Get master index
-    const indexRaw = await kv.get('knowledge:index') as string | null;
-    if (!indexRaw) {
+    const index = await kv.get<{ documents: Array<{ file: string; chunks: number; words: number }> }>('knowledge:index');
+    if (!index) {
       return res.status(404).json({ error: 'No knowledge base ingested. Run POST /api/knowledge/ingest first.' });
     }
-    const index = typeof indexRaw === 'string' ? JSON.parse(indexRaw) : indexRaw;
 
     // 2. Search chunks by keyword matching
-    const queryTerms = query.toLowerCase().split(/\s+/).filter((t: string) => t.length > 2);
+    const queryTerms = sanitizedQuery.toLowerCase().split(/\s+/).filter((t: string) => t.length > 2);
     const matchedChunks: Array<{ chunk: any; score: number }> = [];
 
     for (const doc of index.documents) {
-      const docMeta = await kv.get(`doc:${doc.file}`) as string | null;
-      if (!docMeta) continue;
-      const docData = typeof docMeta === 'string' ? JSON.parse(docMeta) : docMeta;
+      const docData = await kv.get<{ chunkIds?: string[] }>(`doc:${doc.file}`);
+      if (!docData) continue;
 
       for (const chunkId of (docData.chunkIds || [])) {
-        const chunkRaw = await kv.get(`chunk:${chunkId}`) as string | null;
-        if (!chunkRaw) continue;
-        const chunk = typeof chunkRaw === 'string' ? JSON.parse(chunkRaw) : chunkRaw;
+        const chunk = await kv.get<{ sectionTitle: string; content: string; sourceFile: string; lineStart: number; lineEnd: number }>(`chunk:${chunkId}`);
+        if (!chunk) continue;
 
         const contentLower = `${chunk.sectionTitle} ${chunk.content}`.toLowerCase();
         let score = 0;
@@ -56,11 +61,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     matchedChunks.sort((a, b) => b.score - a.score);
-    const topChunks = matchedChunks.slice(0, limit);
+    const topChunks = matchedChunks.slice(0, safeLimit);
 
     if (topChunks.length === 0) {
       return res.status(200).json({
-        answer: `I couldn't find anything in the knowledge base matching "${query}". Try different keywords.`,
+        answer: `I couldn't find anything in the knowledge base matching "${sanitizedQuery}". Try different keywords.`,
         sources: [],
       });
     }
@@ -75,7 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       model: 'gemini-2.5-flash',
       contents: `You are a knowledge base assistant. Answer the user's question using ONLY the provided sources. If the sources don't contain enough information, say so. Cite sources by number [Source N].
 
-QUESTION: ${query}
+QUESTION: ${sanitizedQuery}
 
 SOURCES:
 ${context}
@@ -98,6 +103,6 @@ Answer concisely and accurately. Always cite which source(s) you're drawing from
     });
   } catch (error: any) {
     console.error('Knowledge search error:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Search failed' });
   }
 }
