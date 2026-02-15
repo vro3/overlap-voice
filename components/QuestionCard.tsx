@@ -170,19 +170,29 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                 {showMic && (
                   <button
                     onClick={isListening ? stopListening : startListening}
-                    className={`flex-shrink-0 flex items-center gap-2 px-4 py-3.5 rounded-xl font-medium text-[14px] transition-all duration-200 min-h-[48px] ${
+                    className={`flex-shrink-0 flex flex-col items-center justify-center gap-1 px-4 py-3 rounded-xl font-medium transition-all duration-200 min-h-[48px] ${
                       isListening
-                        ? 'bg-recording text-white animate-pulse-slow'
+                        ? 'bg-recording text-white animate-pulse-slow min-w-[100px]'
                         : 'bg-surface-hover text-secondary hover:text-primary hover:bg-surface border border-border-subtle'
                     }`}
-                    title={isListening ? 'Stop recording' : 'Start voice input'}
+                    title={isListening ? 'Press to stop recording' : 'Press to start voice input'}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                    </svg>
-                    <span className="hidden sm:inline">
-                      {isListening ? 'Listening...' : 'Talk'}
-                    </span>
+                    {isListening ? (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                          <span className="text-[14px]">Listening</span>
+                        </div>
+                        <span className="text-[10px] opacity-80">Press to Stop</span>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                        </svg>
+                        <span className="hidden sm:inline text-[14px]">Talk</span>
+                      </div>
+                    )}
                   </button>
                 )}
               </div>

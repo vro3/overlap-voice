@@ -20,20 +20,21 @@ export function useAutoSave(settings: AppSettings) {
 
     saveTimeoutRef.current = window.setTimeout(() => {
       try {
-        if (settings.storageMode === 'localStorage') {
-          localStorage.setItem(PROGRESS_STORAGE_KEY, serialized);
-        } else {
-          // Vercel KV mode — use existing API
+        // Always save to localStorage as a fallback
+        localStorage.setItem(PROGRESS_STORAGE_KEY, serialized);
+
+        // Also save to server when in Vercel KV mode and user has email
+        if (settings.storageMode === 'vercelKV' && data.email) {
           fetch('/api/user/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               email: data.email,
-              sessions: null, // Legacy format — we'll send the new format
               progress: data,
             }),
           }).catch(console.error);
         }
+
         lastSavedRef.current = serialized;
         setShowSavedToast(true);
         setTimeout(() => setShowSavedToast(false), 2000);
@@ -57,10 +58,27 @@ export function useAutoSave(settings: AppSettings) {
     return null;
   }, []);
 
+  const loadProgressFromServer = useCallback(async (email: string): Promise<SavedProgress | null> => {
+    try {
+      const res = await fetch('/api/user/load', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const json = await res.json();
+      if (json.exists && json.data) {
+        return json.data as SavedProgress;
+      }
+    } catch (e) {
+      console.error('Failed to load progress from server:', e);
+    }
+    return null;
+  }, []);
+
   const clearProgress = useCallback(() => {
     localStorage.removeItem(PROGRESS_STORAGE_KEY);
     lastSavedRef.current = '';
   }, []);
 
-  return { saveProgress, loadProgress, clearProgress, showSavedToast };
+  return { saveProgress, loadProgress, loadProgressFromServer, clearProgress, showSavedToast };
 }

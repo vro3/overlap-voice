@@ -1,14 +1,6 @@
 import { createClient } from '@vercel/kv';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export interface UserData {
-  email: string;
-  sessions: any[];
-  activeSessionId: string;
-  lastUpdated: string;
-}
-
-// Create KV client with STORAGE prefix env vars
 const kv = createClient({
   url: process.env.STORAGE_REST_API_URL!,
   token: process.env.STORAGE_REST_API_TOKEN!,
@@ -20,31 +12,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { email, sessions, activeSessionId } = req.body;
+    const { email, progress } = req.body;
 
     if (!email || typeof email !== 'string') {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    if (!sessions || !Array.isArray(sessions)) {
-      return res.status(400).json({ error: 'Sessions data is required' });
+    if (!progress || typeof progress !== 'object') {
+      return res.status(400).json({ error: 'Progress data is required' });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    const key = `user:${normalizedEmail}`;
+    const key = `overlap:${normalizedEmail}`;
 
-    const userData: UserData = {
+    const data = {
+      ...progress,
       email: normalizedEmail,
-      sessions,
-      activeSessionId: activeSessionId || 'step-1',
-      lastUpdated: new Date().toISOString()
+      lastSaved: new Date().toISOString(),
     };
 
-    await kv.set(key, userData);
+    await kv.set(key, data);
 
     return res.status(200).json({
       success: true,
-      lastUpdated: userData.lastUpdated
+      lastSaved: data.lastSaved,
     });
   } catch (error) {
     console.error('Error saving user data:', error);

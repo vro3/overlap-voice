@@ -111,7 +111,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, onOpenSettings }) =>
 
       {/* Footer */}
       <div className="py-6 text-center border-t border-border-subtle">
-        <p className="text-[11px] text-muted/60">The Overlap v2.0</p>
+        <p className="text-[11px] text-muted/60">The Overlap v2.1</p>
       </div>
     </div>
   );

@@ -14,11 +14,9 @@ import ReviewScreen from './components/ReviewScreen';
 import OutputScreen from './components/OutputScreen';
 import SettingsPanel from './components/SettingsPanel';
 
-const PROGRESS_KEY = 'overlap_progress';
-
 const App: React.FC = () => {
   const { settings, updateSetting, resetSettings } = useSettings();
-  const { saveProgress, loadProgress, clearProgress, showSavedToast } = useAutoSave(settings);
+  const { saveProgress, loadProgress, loadProgressFromServer, clearProgress, showSavedToast } = useAutoSave(settings);
 
   // Screen state
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('landing');
@@ -32,6 +30,19 @@ const App: React.FC = () => {
 
   // UI state
   const [showSettings, setShowSettings] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const handleOpenSettings = useCallback(() => {
+    if (isAdmin) {
+      setShowSettings(true);
+      return;
+    }
+    const pin = window.prompt('Enter admin PIN:');
+    if (pin === '1999') {
+      setIsAdmin(true);
+      setShowSettings(true);
+    }
+  }, [isAdmin]);
 
   // Load saved progress on mount
   useEffect(() => {
@@ -74,14 +85,29 @@ const App: React.FC = () => {
     }
   }, [settings.magicLinkEnabled, settings.routerQuestionEnabled]);
 
-  const handleMagicLinkComplete = useCallback((userEmail: string) => {
+  const handleMagicLinkComplete = useCallback(async (userEmail: string) => {
     setEmail(userEmail);
+
+    // Try to restore from server if KV mode is on
+    if (settings.storageMode === 'vercelKV') {
+      const serverData = await loadProgressFromServer(userEmail);
+      if (serverData) {
+        setAnswers(serverData.answers || {});
+        setRouterAnswer(serverData.routerAnswer || '');
+        setActiveSessionId(serverData.currentStep || 'step-1');
+        if (serverData.currentScreen && serverData.currentScreen !== 'landing' && serverData.currentScreen !== 'magic-link') {
+          setCurrentScreen(serverData.currentScreen);
+          return;
+        }
+      }
+    }
+
     if (settings.routerQuestionEnabled) {
       setCurrentScreen('router');
     } else {
       setCurrentScreen('questions');
     }
-  }, [settings.routerQuestionEnabled]);
+  }, [settings.routerQuestionEnabled, settings.storageMode, loadProgressFromServer]);
 
   const handleRouterContinue = useCallback(() => {
     setCurrentScreen('questions');
@@ -192,7 +218,7 @@ const App: React.FC = () => {
       {currentScreen === 'landing' && (
         <LandingPage
           onStart={handleStart}
-          onOpenSettings={() => setShowSettings(true)}
+          onOpenSettings={handleOpenSettings}
         />
       )}
 
@@ -219,7 +245,7 @@ const App: React.FC = () => {
             settings={settings}
             userEmail={email || undefined}
             onLogout={email ? handleLogout : undefined}
-            onOpenSettings={() => setShowSettings(true)}
+            onOpenSettings={handleOpenSettings}
             onExport={handleExport}
           />
           <main className="flex-1 overflow-x-hidden">

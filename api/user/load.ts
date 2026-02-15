@@ -1,14 +1,6 @@
 import { createClient } from '@vercel/kv';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export interface UserData {
-  email: string;
-  sessions: any[];
-  activeSessionId: string;
-  lastUpdated: string;
-}
-
-// Create KV client with STORAGE prefix env vars
 const kv = createClient({
   url: process.env.STORAGE_REST_API_URL!,
   token: process.env.STORAGE_REST_API_TOKEN!,
@@ -27,20 +19,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    const key = `user:${normalizedEmail}`;
+    const key = `overlap:${normalizedEmail}`;
 
-    const userData = await kv.get<UserData>(key);
+    const data = await kv.get(key);
 
-    if (userData) {
-      return res.status(200).json({
-        exists: true,
-        data: userData
-      });
+    if (data) {
+      return res.status(200).json({ exists: true, data });
     } else {
-      return res.status(200).json({
-        exists: false,
-        data: null
-      });
+      return res.status(200).json({ exists: false, data: null });
     }
   } catch (error) {
     console.error('Error loading user data:', error);
