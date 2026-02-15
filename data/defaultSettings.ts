@@ -9,7 +9,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     reviewScreenEnabled: true,
 
     // Persistence
-    storageMode: 'localStorage',
+    storageMode: 'vercelKV',
     autoSaveEnabled: true,
     autoSaveDebounceMs: 500,
 

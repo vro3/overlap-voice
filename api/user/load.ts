@@ -2,8 +2,8 @@ import { createClient } from '@vercel/kv';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const kv = createClient({
-  url: process.env.STORAGE_REST_API_URL!,
-  token: process.env.STORAGE_REST_API_TOKEN!,
+  url: process.env.KV_REST_API_URL!,
+  token: process.env.KV_REST_API_TOKEN!,
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
