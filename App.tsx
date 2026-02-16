@@ -183,6 +183,28 @@ const App: React.FC = () => {
     downloadMarkdown(md, email || 'user');
   }, [email, sessions, answers, routerAnswer, settings.aiAnalysisEnabled]);
 
+  const handleDownloadProgress = useCallback(() => {
+    const progress = {
+      email,
+      routerAnswer,
+      answers,
+      currentStep: activeSessionId,
+      currentScreen,
+      lastSaved: new Date().toISOString(),
+    };
+
+    const dataStr = JSON.stringify(progress, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `overlap-progress-${email || 'backup'}-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [email, routerAnswer, answers, activeSessionId, currentScreen]);
+
   const handleStartOver = useCallback(() => {
     setAnswers({});
     setRouterAnswer('');
@@ -253,6 +275,7 @@ const App: React.FC = () => {
             onLogout={email ? handleLogout : undefined}
             onOpenSettings={handleOpenSettings}
             onExport={handleExport}
+            onDownloadProgress={handleDownloadProgress}
           />
           <main className="flex-1 overflow-x-hidden">
             <StepView

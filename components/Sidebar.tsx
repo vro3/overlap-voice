@@ -11,6 +11,7 @@ interface SidebarProps {
   onLogout?: () => void;
   onOpenSettings: () => void;
   onExport: () => void;
+  onDownloadProgress?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -23,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
   onOpenSettings,
   onExport,
+  onDownloadProgress,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -210,15 +212,30 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          <button
-            onClick={onExport}
-            className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-2.5 bg-surface border border-border-subtle text-primary text-[13px] font-medium rounded-xl hover:bg-surface-hover transition-all"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Export Markdown
-          </button>
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={onExport}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-surface border border-border-subtle text-primary text-[12px] font-medium rounded-xl hover:bg-surface-hover transition-all"
+              title="Export as Markdown knowledge file"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Export
+            </button>
+            {onDownloadProgress && (
+              <button
+                onClick={onDownloadProgress}
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-surface border border-border-subtle text-primary text-[12px] font-medium rounded-xl hover:bg-surface-hover transition-all"
+                title="Download progress as JSON backup"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3v-9" />
+                </svg>
+                Progress
+              </button>
+            )}
+          </div>
 
           <div className="flex gap-2">
             <button
