@@ -20,24 +20,28 @@ export function useAutoSave(settings: AppSettings) {
 
     saveTimeoutRef.current = window.setTimeout(() => {
       try {
-        // Always save to localStorage as a fallback
+        // Primary: Always save to localStorage (instant, synchronous)
         localStorage.setItem(PROGRESS_STORAGE_KEY, serialized);
-
-        // Also save to server when in Vercel KV mode and user has email
-        if (settings.storageMode === 'vercelKV' && data.email) {
-          fetch('/api/user/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: data.email,
-              progress: data,
-            }),
-          }).catch(console.error);
-        }
-
         lastSavedRef.current = serialized;
         setShowSavedToast(true);
         setTimeout(() => setShowSavedToast(false), 2000);
+
+        // Secondary: Attempt server save (fire-and-forget, non-blocking)
+        // Wrapped in setTimeout to prevent blocking the UI
+        if (settings.storageMode === 'vercelKV' && data.email) {
+          setTimeout(() => {
+            fetch('/api/user/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: data.email,
+                progress: data,
+              }),
+            }).catch(() => {
+              // Silently fail — localStorage is already saved
+            });
+          }, 0);
+        }
       } catch (e) {
         console.error('Failed to save progress:', e);
       }

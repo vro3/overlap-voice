@@ -90,17 +90,28 @@ const App: React.FC = () => {
   const handleMagicLinkComplete = useCallback(async (userEmail: string) => {
     setEmail(userEmail);
 
-    // Try to restore from server if KV mode is on
+    // Try to restore from server if KV mode is on (with timeout to prevent blocking)
     if (settings.storageMode === 'vercelKV') {
-      const serverData = await loadProgressFromServer(userEmail);
-      if (serverData) {
-        setAnswers(serverData.answers || {});
-        setRouterAnswer(serverData.routerAnswer || '');
-        setActiveSessionId(serverData.currentStep || 'step-1');
-        if (serverData.currentScreen && serverData.currentScreen !== 'landing' && serverData.currentScreen !== 'magic-link') {
-          setCurrentScreen(serverData.currentScreen);
-          return;
+      try {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 2000)
+        );
+        const serverData = await Promise.race([
+          loadProgressFromServer(userEmail),
+          timeoutPromise
+        ]) as any;
+
+        if (serverData) {
+          setAnswers(serverData.answers || {});
+          setRouterAnswer(serverData.routerAnswer || '');
+          setActiveSessionId(serverData.currentStep || 'step-1');
+          if (serverData.currentScreen && serverData.currentScreen !== 'landing' && serverData.currentScreen !== 'magic-link') {
+            setCurrentScreen(serverData.currentScreen);
+            return;
+          }
         }
+      } catch (e) {
+        // Silently fail and proceed with localStorage data
       }
     }
 
