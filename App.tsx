@@ -5,7 +5,6 @@ import { useSettings } from './hooks/useSettings';
 import { useAutoSave } from './hooks/useAutoSave';
 import { generateMarkdown, downloadMarkdown } from './utils/generateMarkdown';
 
-import LandingPage from './components/LandingPage';
 import MagicLink from './components/MagicLink';
 import RouterQuestion from './components/RouterQuestion';
 import Sidebar from './components/Sidebar';
@@ -19,7 +18,7 @@ const App: React.FC = () => {
   const { saveProgress, loadProgress, loadProgressFromServer, clearProgress, showSavedToast } = useAutoSave(settings);
 
   // Screen state
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>('landing');
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('router');
 
   // Data state
   const [sessions] = useState<Session[]>(INITIAL_SESSIONS);
@@ -52,16 +51,19 @@ const App: React.FC = () => {
       setAnswers(saved.answers || {});
       setRouterAnswer(saved.routerAnswer || '');
       setActiveSessionId(saved.currentStep || 'step-1');
-      // Resume where they left off
+      // Resume where they left off (but skip landing page)
       if (saved.currentScreen && saved.currentScreen !== 'landing') {
         setCurrentScreen(saved.currentScreen);
+      } else {
+        // Always start with router question, not landing
+        setCurrentScreen('router');
       }
     }
   }, []);
 
   // Auto-save on changes
   useEffect(() => {
-    if (currentScreen === 'landing' || currentScreen === 'magic-link') return;
+    if (currentScreen === 'magic-link') return;
     saveProgress({
       email,
       currentStep: activeSessionId,
@@ -174,13 +176,13 @@ const App: React.FC = () => {
     setAnswers({});
     setRouterAnswer('');
     setActiveSessionId('step-1');
-    setCurrentScreen('landing');
+    setCurrentScreen('router');
     clearProgress();
   }, [clearProgress]);
 
   const handleLogout = useCallback(() => {
     setEmail('');
-    setCurrentScreen('landing');
+    setCurrentScreen('router');
   }, []);
 
   const handleClearProgress = useCallback(() => {
@@ -215,13 +217,6 @@ const App: React.FC = () => {
       )}
 
       {/* Screens */}
-      {currentScreen === 'landing' && (
-        <LandingPage
-          onStart={handleStart}
-          onOpenSettings={handleOpenSettings}
-        />
-      )}
-
       {currentScreen === 'magic-link' && (
         <MagicLink onComplete={handleMagicLinkComplete} />
       )}
