@@ -12,6 +12,8 @@ import StepView from './components/StepView';
 import ReviewScreen from './components/ReviewScreen';
 import OutputScreen from './components/OutputScreen';
 import SettingsPanel from './components/SettingsPanel';
+import AudioSettingsModal from './components/AudioSettingsModal';
+import { KnowledgeSearch } from './components/KnowledgeSearch';
 
 const App: React.FC = () => {
   const { settings, updateSetting, resetSettings } = useSettings();
@@ -30,6 +32,7 @@ const App: React.FC = () => {
   // UI state
   const [showSettings, setShowSettings] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showAudioSettings, setShowAudioSettings] = useState(false);
 
   const handleOpenSettings = useCallback(() => {
     if (isAdmin) {
@@ -226,6 +229,24 @@ const App: React.FC = () => {
     setCurrentScreen('questions');
   }, [clearProgress]);
 
+  const handleUploadProgress = useCallback((progress: any) => {
+    try {
+      if (progress.email) setEmail(progress.email);
+      if (progress.routerAnswer) setRouterAnswer(progress.routerAnswer);
+      if (progress.answers) setAnswers(progress.answers);
+      if (progress.currentStep) setActiveSessionId(progress.currentStep);
+      if (progress.currentScreen && progress.currentScreen !== 'landing') {
+        setCurrentScreen(progress.currentScreen);
+      } else {
+        setCurrentScreen('questions');
+      }
+      alert('Progress restored successfully!');
+    } catch (error) {
+      console.error('Failed to restore progress:', error);
+      alert('Failed to restore progress. Please check the file format.');
+    }
+  }, []);
+
   // --- Render ---
 
   const activeSession = sessions[activeSessionIndex] || sessions[0];
@@ -241,6 +262,12 @@ const App: React.FC = () => {
           onClose={() => setShowSettings(false)}
         />
       )}
+
+      {/* Audio Settings Modal (overlay, any screen) */}
+      <AudioSettingsModal
+        isOpen={showAudioSettings}
+        onClose={() => setShowAudioSettings(false)}
+      />
 
       {/* Save toast */}
       {showSavedToast && (
@@ -260,6 +287,7 @@ const App: React.FC = () => {
           onChange={setRouterAnswer}
           onContinue={handleRouterContinue}
           settings={settings}
+          onAudioSettings={() => setShowAudioSettings(true)}
         />
       )}
 
@@ -276,6 +304,8 @@ const App: React.FC = () => {
             onOpenSettings={handleOpenSettings}
             onExport={handleExport}
             onDownloadProgress={handleDownloadProgress}
+            onUploadProgress={handleUploadProgress}
+            onAudioSettings={() => setShowAudioSettings(true)}
           />
           <main className="flex-1 overflow-x-hidden">
             <StepView
@@ -290,6 +320,7 @@ const App: React.FC = () => {
               onPrevStep={handlePrevStep}
               isFirstStep={activeSessionIndex === 0}
               isLastStep={activeSessionIndex === sessions.length - 1}
+              onAudioSettings={() => setShowAudioSettings(true)}
             />
           </main>
         </div>
@@ -307,14 +338,39 @@ const App: React.FC = () => {
       )}
 
       {currentScreen === 'output' && (
-        <OutputScreen
-          email={email || 'user'}
-          sessions={sessions}
-          answers={answers}
-          routerAnswer={routerAnswer}
-          aiEnabled={settings.aiAnalysisEnabled}
-          onStartOver={handleStartOver}
-        />
+        <>
+          <OutputScreen
+            email={email || 'user'}
+            sessions={sessions}
+            answers={answers}
+            routerAnswer={routerAnswer}
+            aiEnabled={settings.aiAnalysisEnabled}
+            onStartOver={handleStartOver}
+          />
+          <div style={{ textAlign: 'center', paddingBottom: 32 }}>
+            <button
+              onClick={() => setCurrentScreen('search')}
+              style={{ background: 'none', border: '1px solid #333', color: '#888', cursor: 'pointer', fontSize: 13, padding: '8px 20px', borderRadius: 8 }}
+            >
+              Search knowledge base
+            </button>
+          </div>
+        </>
+      )}
+
+      {currentScreen === 'search' && (
+        <div className="min-h-screen bg-background text-primary">
+          <div style={{ padding: '16px 24px', borderBottom: '1px solid #1f1f1f', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              onClick={() => setCurrentScreen('output')}
+              style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: 14 }}
+            >
+              ← Back
+            </button>
+            <span style={{ color: '#555', fontSize: 14 }}>Knowledge Base Search</span>
+          </div>
+          <KnowledgeSearch />
+        </div>
       )}
     </>
   );

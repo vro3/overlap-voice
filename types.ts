@@ -45,7 +45,7 @@ export interface GeminiResult {
   quotable?: string;
 }
 
-export type AppScreen = 'landing' | 'magic-link' | 'router' | 'questions' | 'review' | 'output';
+export type AppScreen = 'landing' | 'magic-link' | 'router' | 'questions' | 'review' | 'output' | 'search';
 
 export interface AppSettings {
   // Features
