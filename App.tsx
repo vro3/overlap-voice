@@ -13,6 +13,7 @@ import ReviewScreen from './components/ReviewScreen';
 import OutputScreen from './components/OutputScreen';
 import SettingsPanel from './components/SettingsPanel';
 import AudioSettingsModal from './components/AudioSettingsModal';
+import ProcessVisionScreen from './components/ProcessVisionScreen';
 import { KnowledgeSearch } from './components/KnowledgeSearch';
 
 const App: React.FC = () => {
@@ -20,7 +21,7 @@ const App: React.FC = () => {
   const { saveProgress, loadProgress, loadProgressFromServer, clearProgress, showSavedToast } = useAutoSave(settings);
 
   // Screen state
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>('router');
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('vision');
 
   // Data state
   const [sessions] = useState<Session[]>(INITIAL_SESSIONS);
@@ -81,6 +82,16 @@ const App: React.FC = () => {
   // --- Navigation Helpers ---
 
   const handleStart = useCallback(() => {
+    if (settings.magicLinkEnabled) {
+      setCurrentScreen('magic-link');
+    } else if (settings.routerQuestionEnabled) {
+      setCurrentScreen('router');
+    } else {
+      setCurrentScreen('questions');
+    }
+  }, [settings.magicLinkEnabled, settings.routerQuestionEnabled]);
+
+  const handleSkipVision = useCallback(() => {
     if (settings.magicLinkEnabled) {
       setCurrentScreen('magic-link');
     } else if (settings.routerQuestionEnabled) {
@@ -277,6 +288,14 @@ const App: React.FC = () => {
       )}
 
       {/* Screens */}
+      {currentScreen === 'vision' && (
+        <ProcessVisionScreen
+          onStart={handleStart}
+          onOpenSettings={handleOpenSettings}
+          onSkip={handleSkipVision}
+        />
+      )}
+
       {currentScreen === 'magic-link' && (
         <MagicLink onComplete={handleMagicLinkComplete} />
       )}

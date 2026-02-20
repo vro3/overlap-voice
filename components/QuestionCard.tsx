@@ -29,6 +29,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   const [aiSummary, setAiSummary] = useState(existingResponse?.summary || '');
 
   // Speech recognition for simple mode
+  const audioDeviceId = typeof window !== 'undefined' ? localStorage.getItem('selectedAudioDeviceId') || '' : '';
   const { isSupported: speechSupported, isListening, startListening, stopListening } = useSpeechRecognition({
     onTranscript: (text) => {
       // Append speech to existing text
@@ -36,6 +37,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
       const newValue = current ? current + ' ' + text : text;
       onChange(question.id, newValue);
     },
+    audioDeviceId: audioDeviceId || undefined,
   });
 
   const showMic = settings.voiceInputEnabled && speechSupported && question.inputType === 'textarea';

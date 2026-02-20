@@ -12,6 +12,8 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onExport: () => void;
   onDownloadProgress?: () => void;
+  onUploadProgress?: (progress: any) => void;
+  onAudioSettings?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -25,8 +27,30 @@ const Sidebar: React.FC<SidebarProps> = ({
   onOpenSettings,
   onExport,
   onDownloadProgress,
+  onUploadProgress,
+  onAudioSettings,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const progress = JSON.parse(content);
+        if (onUploadProgress) {
+          onUploadProgress(progress);
+        }
+      } catch (error) {
+        console.error('Failed to parse progress file:', error);
+        alert('Failed to load progress file. Please ensure it\'s a valid JSON backup.');
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const totalQuestions = sessions.reduce((acc, s) => acc + s.questions.length, 0);
   const answeredCount = sessions.reduce(
@@ -237,10 +261,31 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
+          {onUploadProgress && (
+            <div className="mb-3">
+              <label className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-surface border border-border-subtle text-primary text-[12px] font-medium rounded-xl hover:bg-surface-hover transition-all cursor-pointer"
+                title="Restore progress from downloaded JSON backup"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33A3 3 0 0116.5 19.5H6.75z" />
+                </svg>
+                Restore
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          )}
+
+
           <div className="flex gap-2">
             <button
               onClick={onOpenSettings}
               className="flex-1 flex items-center justify-center gap-1.5 text-[11px] text-muted hover:text-primary transition-colors py-2 rounded-lg hover:bg-surface"
+              title="Settings"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -248,6 +293,18 @@ const Sidebar: React.FC<SidebarProps> = ({
               </svg>
               Settings
             </button>
+            {onAudioSettings && (
+              <button
+                onClick={onAudioSettings}
+                className="flex-1 flex items-center justify-center gap-1.5 text-[11px] text-muted hover:text-primary transition-colors py-2 rounded-lg hover:bg-surface"
+                title="Audio settings"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12.066 11.2a1 1 0 000 1.6c.784.57 1.99 1.465 3.348 1.465 2.646 0 5.586-1.496 5.586-4.391V9.325c0-2.895-2.94-4.391-5.586-4.391-1.357 0-2.564.895-3.348 1.465a1 1 0 000 1.6m0 5.6c.784.57 1.99 1.466 3.348 1.466 2.646 0 5.586-1.496 5.586-4.391V3.933c0-2.895-2.94-4.391-5.586-4.391-1.357 0-2.564.895-3.348 1.465" />
+                </svg>
+                Audio
+              </button>
+            )}
             {onLogout && (
               <button
                 onClick={onLogout}

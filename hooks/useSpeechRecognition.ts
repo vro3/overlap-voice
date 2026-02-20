@@ -3,10 +3,11 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 interface UseSpeechRecognitionOptions {
   onTranscript?: (text: string) => void;
   lang?: string;
+  audioDeviceId?: string;
 }
 
 export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) {
-  const { onTranscript, lang = 'en-US' } = options;
+  const { onTranscript, lang = 'en-US', audioDeviceId } = options;
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 
@@ -29,6 +30,11 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = lang;
+
+    // Use selected audio device if available
+    if (audioDeviceId) {
+      (recognition as any).audioInputDeviceId = audioDeviceId;
+    }
 
     let finalTranscript = '';
 
@@ -63,7 +69,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     recognitionRef.current = recognition;
     recognition.start();
     setIsListening(true);
-  }, [isSupported, lang, onTranscript]);
+  }, [isSupported, lang, onTranscript, audioDeviceId]);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {

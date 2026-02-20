@@ -14,11 +14,12 @@ interface StepViewProps {
   onPrevStep: () => void;
   isFirstStep: boolean;
   isLastStep: boolean;
+  onAudioSettings?: () => void;
 }
 
 const StepView: React.FC<StepViewProps> = ({
   session, stepIndex, totalSteps, answers, onAnswerChange,
-  settings, onNextStep, onPrevStep, isFirstStep, isLastStep
+  settings, onNextStep, onPrevStep, isFirstStep, isLastStep, onAudioSettings
 }) => {
   const visibleQuestions = settings.showAllQuestions
     ? session.questions

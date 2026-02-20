@@ -7,15 +7,18 @@ interface RouterQuestionProps {
   onChange: (value: string) => void;
   onContinue: () => void;
   settings: AppSettings;
+  onAudioSettings?: () => void;
 }
 
-const RouterQuestion: React.FC<RouterQuestionProps> = ({ value, onChange, onContinue, settings }) => {
+const RouterQuestion: React.FC<RouterQuestionProps> = ({ value, onChange, onContinue, settings, onAudioSettings }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const audioDeviceId = typeof window !== 'undefined' ? localStorage.getItem('selectedAudioDeviceId') || '' : '';
   const { isSupported, isListening, startListening, stopListening } = useSpeechRecognition({
     onTranscript: (text) => {
       const current = value;
       onChange(current ? current + ' ' + text : text);
     },
+    audioDeviceId: audioDeviceId || undefined,
   });
 
   const showMic = settings.voiceInputEnabled && isSupported;
