@@ -1,19 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AppScreen, Session, InterviewResponse } from './types';
-import { INITIAL_SESSIONS, ROUTER_QUESTION } from './data/initialData';
+import { AppScreen, Session, InterviewResponse, ExtractionMode } from './types';
+import { INITIAL_SESSIONS, ROUTER_QUESTION, PERSONAL_SESSIONS, PERSONAL_ROUTER_QUESTION } from './data/initialData';
 import { useSettings } from './hooks/useSettings';
 import { useAutoSave } from './hooks/useAutoSave';
 import { generateMarkdown, downloadMarkdown } from './utils/generateMarkdown';
 
 import MagicLink from './components/MagicLink';
-import RouterQuestion from './components/RouterQuestion';
 import Sidebar from './components/Sidebar';
 import StepView from './components/StepView';
 import ReviewScreen from './components/ReviewScreen';
 import OutputScreen from './components/OutputScreen';
 import SettingsPanel from './components/SettingsPanel';
 import AudioSettingsModal from './components/AudioSettingsModal';
-import ProcessVisionScreen from './components/ProcessVisionScreen';
 import { KnowledgeSearch } from './components/KnowledgeSearch';
 
 const App: React.FC = () => {
@@ -21,10 +19,11 @@ const App: React.FC = () => {
   const { saveProgress, loadProgress, loadProgressFromServer, clearProgress, showSavedToast } = useAutoSave(settings);
 
   // Screen state
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>('vision');
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('magic-link');
 
   // Data state
-  const [sessions] = useState<Session[]>(INITIAL_SESSIONS);
+  const [extractionMode, setExtractionMode] = useState<ExtractionMode>('business');
+  const sessions = extractionMode === 'business' ? INITIAL_SESSIONS : PERSONAL_SESSIONS;
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [routerAnswer, setRouterAnswer] = useState('');
   const [email, setEmail] = useState('');
@@ -34,6 +33,11 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
+
+  const handleModeChange = useCallback((mode: ExtractionMode) => {
+    setExtractionMode(mode);
+    setActiveSessionId(mode === 'business' ? 'step-1' : 'p-step-1');
+  }, []);
 
   const handleOpenSettings = useCallback(() => {
     if (isAdmin) {
@@ -55,12 +59,11 @@ const App: React.FC = () => {
       setAnswers(saved.answers || {});
       setRouterAnswer(saved.routerAnswer || '');
       setActiveSessionId(saved.currentStep || 'step-1');
-      // Resume where they left off (but skip landing page)
-      if (saved.currentScreen && saved.currentScreen !== 'landing') {
+      // Resume where they left off (but skip vision/landing/router — go to welcome)
+      if (saved.currentScreen && saved.currentScreen !== 'landing' && saved.currentScreen !== 'router' && saved.currentScreen !== 'vision') {
         setCurrentScreen(saved.currentScreen);
       } else {
-        // Always start with router question, not landing
-        setCurrentScreen('router');
+        setCurrentScreen('magic-link');
       }
     }
   }, []);
@@ -81,31 +84,12 @@ const App: React.FC = () => {
 
   // --- Navigation Helpers ---
 
-  const handleStart = useCallback(() => {
-    if (settings.magicLinkEnabled) {
-      setCurrentScreen('magic-link');
-    } else if (settings.routerQuestionEnabled) {
-      setCurrentScreen('router');
-    } else {
-      setCurrentScreen('questions');
-    }
-  }, [settings.magicLinkEnabled, settings.routerQuestionEnabled]);
-
-  const handleSkipVision = useCallback(() => {
-    if (settings.magicLinkEnabled) {
-      setCurrentScreen('magic-link');
-    } else if (settings.routerQuestionEnabled) {
-      setCurrentScreen('router');
-    } else {
-      setCurrentScreen('questions');
-    }
-  }, [settings.magicLinkEnabled, settings.routerQuestionEnabled]);
-
-  const handleMagicLinkComplete = useCallback(async (userEmail: string) => {
+  const handleMagicLinkComplete = useCallback(async (userEmail: string, userRouterAnswer: string) => {
     setEmail(userEmail);
+    if (userRouterAnswer) setRouterAnswer(userRouterAnswer);
 
-    // Try to restore from server if KV mode is on (with timeout to prevent blocking)
-    if (settings.storageMode === 'vercelKV') {
+    // Try to restore from server (with timeout to prevent blocking)
+    if (settings.storageMode === 'googleSheets') {
       try {
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('timeout')), 2000)
@@ -117,9 +101,11 @@ const App: React.FC = () => {
 
         if (serverData) {
           setAnswers(serverData.answers || {});
-          setRouterAnswer(serverData.routerAnswer || '');
+          if (!userRouterAnswer && serverData.routerAnswer) {
+            setRouterAnswer(serverData.routerAnswer);
+          }
           setActiveSessionId(serverData.currentStep || 'step-1');
-          if (serverData.currentScreen && serverData.currentScreen !== 'landing' && serverData.currentScreen !== 'magic-link') {
+          if (serverData.currentScreen && serverData.currentScreen !== 'landing' && serverData.currentScreen !== 'magic-link' && serverData.currentScreen !== 'router') {
             setCurrentScreen(serverData.currentScreen);
             return;
           }
@@ -129,14 +115,11 @@ const App: React.FC = () => {
       }
     }
 
-    if (settings.routerQuestionEnabled) {
-      setCurrentScreen('router');
-    } else {
-      setCurrentScreen('questions');
-    }
-  }, [settings.routerQuestionEnabled, settings.storageMode, loadProgressFromServer]);
+    setCurrentScreen('questions');
+  }, [settings.storageMode, loadProgressFromServer]);
 
-  const handleRouterContinue = useCallback(() => {
+  const handleSkipLogin = useCallback(() => {
+    setEmail('skip@skip.com');
     setCurrentScreen('questions');
   }, []);
 
@@ -222,14 +205,16 @@ const App: React.FC = () => {
   const handleStartOver = useCallback(() => {
     setAnswers({});
     setRouterAnswer('');
+    setEmail('');
+    setExtractionMode('business');
     setActiveSessionId('step-1');
-    setCurrentScreen('router');
+    setCurrentScreen('magic-link');
     clearProgress();
   }, [clearProgress]);
 
   const handleLogout = useCallback(() => {
     setEmail('');
-    setCurrentScreen('router');
+    setCurrentScreen('magic-link');
   }, []);
 
   const handleClearProgress = useCallback(() => {
@@ -288,30 +273,24 @@ const App: React.FC = () => {
       )}
 
       {/* Screens */}
-      {currentScreen === 'vision' && (
-        <ProcessVisionScreen
-          onStart={handleStart}
-          onOpenSettings={handleOpenSettings}
-          onSkip={handleSkipVision}
-        />
-      )}
-
       {currentScreen === 'magic-link' && (
-        <MagicLink onComplete={handleMagicLinkComplete} />
-      )}
-
-      {currentScreen === 'router' && (
-        <RouterQuestion
-          value={routerAnswer}
-          onChange={setRouterAnswer}
-          onContinue={handleRouterContinue}
+        <MagicLink
+          onComplete={handleMagicLinkComplete}
+          onSkip={handleSkipLogin}
           settings={settings}
+          initialRouterAnswer={routerAnswer}
           onAudioSettings={() => setShowAudioSettings(true)}
         />
       )}
 
       {currentScreen === 'questions' && (
-        <div className="flex min-h-screen bg-background text-primary">
+        <div className="flex min-h-screen bg-background text-primary relative">
+          {/* User email indicator — bottom left */}
+          {email && email !== 'skip@skip.com' && (
+            <div className="fixed bottom-4 left-4 z-20 lg:left-[calc(18rem+1rem)] text-[11px] text-muted bg-surface/80 backdrop-blur-sm border border-border-subtle rounded-lg px-3 py-1.5">
+              {email}
+            </div>
+          )}
           <Sidebar
             sessions={sessions}
             activeSessionId={activeSessionId}
@@ -325,6 +304,8 @@ const App: React.FC = () => {
             onDownloadProgress={handleDownloadProgress}
             onUploadProgress={handleUploadProgress}
             onAudioSettings={() => setShowAudioSettings(true)}
+            extractionMode={extractionMode}
+            onModeChange={handleModeChange}
           />
           <main className="flex-1 overflow-x-hidden">
             <StepView

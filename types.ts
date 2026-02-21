@@ -1,3 +1,4 @@
+export type ExtractionMode = 'business' | 'personal';
 export type FieldType = 'short_text' | 'long_text' | 'single_choice' | 'multi_choice';
 export type QuestionTier = 'must-ask' | 'should-ask' | 'optional';
 export type InputType = 'textarea' | 'url' | 'url_multi';
@@ -56,7 +57,7 @@ export interface AppSettings {
   reviewScreenEnabled: boolean;
 
   // Persistence
-  storageMode: 'localStorage' | 'vercelKV';
+  storageMode: 'localStorage' | 'googleSheets';
   autoSaveEnabled: boolean;
   autoSaveDebounceMs: number;
 

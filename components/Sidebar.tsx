@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Session, AppSettings } from '../types';
+import { Session, AppSettings, ExtractionMode } from '../types';
 
 interface SidebarProps {
   sessions: Session[];
@@ -14,6 +14,8 @@ interface SidebarProps {
   onDownloadProgress?: () => void;
   onUploadProgress?: (progress: any) => void;
   onAudioSettings?: () => void;
+  extractionMode?: ExtractionMode;
+  onModeChange?: (mode: ExtractionMode) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -29,6 +31,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onDownloadProgress,
   onUploadProgress,
   onAudioSettings,
+  extractionMode = 'business',
+  onModeChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -111,9 +115,35 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-4">
+          {/* Mode Tabs */}
+          {onModeChange && (
+            <div className="mx-1 mb-4 flex bg-background rounded-lg p-0.5 border border-border-subtle">
+              <button
+                onClick={() => onModeChange('business')}
+                className={`flex-1 py-2 text-[11px] font-semibold rounded-md transition-all duration-200 ${
+                  extractionMode === 'business'
+                    ? 'bg-surface text-primary shadow-sm'
+                    : 'text-muted hover:text-secondary'
+                }`}
+              >
+                Business
+              </button>
+              <button
+                onClick={() => onModeChange('personal')}
+                className={`flex-1 py-2 text-[11px] font-semibold rounded-md transition-all duration-200 ${
+                  extractionMode === 'personal'
+                    ? 'bg-surface text-primary shadow-sm'
+                    : 'text-muted hover:text-secondary'
+                }`}
+              >
+                Personal
+              </button>
+            </div>
+          )}
+
           <div className="mb-2">
             <span className="px-3 text-[10px] font-semibold text-muted uppercase tracking-[0.12em]">
-              Your Workflow
+              {extractionMode === 'business' ? 'Your Workflow' : 'Your Life Map'}
             </span>
           </div>
 

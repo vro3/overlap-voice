@@ -192,3 +192,177 @@ export const ROUTER_QUESTION: Question = createQ(
   "Router",
   'must-ask'
 );
+
+// ─── PERSONAL EXTRACTION ───────────────────────────────────────────────
+
+export const PERSONAL_ROUTER_QUESTION: Question = createQ(
+  'personal_intention',
+  "Imagine this process did its job perfectly. How does your life look different or better in the next three to six months?",
+  "Not the aspirational Instagram version. What specific friction would be gone? What would your Tuesday morning actually look like?",
+  "Router",
+  'must-ask'
+);
+
+export const PERSONAL_SESSIONS: Session[] = [
+  {
+    id: 'p-step-1',
+    name: 'Getting Started',
+    subtitle: 'Intentions, scope, and safety',
+    questions: [
+      createQ('personal_why_now', "Why are you drawn to doing this right now, in this season of your life?", "What happened recently — or keeps happening — that made you say \"okay, I need to look at my life more intentionally\"?", "Router", 'must-ask'),
+      createQ('personal_scope', "Are there 1-2 areas of life you especially want this process to focus on first?", "For example: work, relationships, health, money, creativity, home, or \"I honestly want it all mapped.\" This helps us weight what matters most to you right now.", "Router", 'should-ask'),
+      createQ('personal_boundaries', "Are there any topics you don't want to go into right now?", "Things that feel too raw, too private, or just \"not yet.\" You're allowed to keep some doors closed.", "Safety", 'should-ask'),
+      createQ('personal_share_limits', "Is there anything you're okay writing here but do NOT want quoted or reflected back in your personal document?", "For example: sensitive stories, third-party details, or anything that's \"for context only.\" Name it and we'll respect it.", "Safety", 'should-ask'),
+    ],
+    responses: []
+  },
+  {
+    id: 'p-step-2',
+    name: 'Who You Are',
+    subtitle: 'Core identity, values, and energy',
+    questions: [
+      createQ('id_description', "If you couldn't use your job title, your relationship roles, or your accomplishments — how would you describe who you are?", "Strip away the résumé. What's left when you remove everything you do for other people?", "Core Identity", 'must-ask'),
+      createQ('id_origin', "What's the short version of how you became who you are? The real version, not the polished one.", "What shaped you? Was it deliberate or did life just happen?", "Origin", 'must-ask'),
+      createQ('id_turning_points', "What have been 3-5 major turning points in your life so far?", "Times when everything changed — for better or worse. What happened, and what did it change in you?", "Turning Points", 'should-ask'),
+      createQ('id_values_lived', "What do you actually prioritize with your time and money — not what you wish you prioritized?", "Look at your last month's calendar and bank statement. What story do they tell?", "Values (Lived)", 'must-ask'),
+      createQ('id_values_aspirational', "What do you wish you prioritized more? What's the gap between who you are and who you want to be?", "Be specific. \"Be healthier\" doesn't count. What would healthy actually look like for you?", "Values (Aspirational)", 'must-ask'),
+      createQ('id_nonnegotiables', "What are the things in your life you will not compromise on, no matter what?", "The lines you've drawn. The things that if they changed, you wouldn't recognize your life.", "Non-Negotiables", 'should-ask'),
+      createQ('id_energy', "What gives you energy? What drains you? Be brutally specific.", "Not hobbies vs. chores. Think about the specific moments in a week where you feel alive vs. depleted.", "Energy Map", 'should-ask'),
+      createQ('id_contradictions', "What's something about you that seems contradictory? Something that surprises people?", "The thing that doesn't fit the narrative. That's usually where the truth is.", "Contradictions", 'optional'),
+    ],
+    responses: []
+  },
+  {
+    id: 'p-step-3',
+    name: 'What You Want',
+    subtitle: 'Vision, goals, and what\'s been in the way',
+    questions: [
+      createQ('want_vision', "If you could design the next chapter of your life with no constraints, what would it look like?", "Where are you? What are you doing on a typical day? Who's around you? How do you feel?", "Big Picture", 'must-ask'),
+      createQ('want_goals', "What are the 3-5 specific things you want to change, build, or achieve in the next year?", "Not bucket-list dreams. Things you'd actually commit to if someone held you accountable.", "Specific Goals", 'must-ask'),
+      createQ('want_blockers', "What has stopped you from making these changes already? Be honest.", "Is it time? Money? Fear? Clarity? Other people? All of the above?", "Blockers", 'must-ask'),
+      createQ('want_past_attempts', "What have you already tried? What worked partially? What failed completely?", "Don't skip the failures. They're the most useful data.", "Past Attempts", 'should-ask'),
+      createQ('want_success_criteria', "How will you know you've made progress? What does \"better\" actually look like in measurable terms?", "If you can't measure it, you can't track it. Get specific.", "Success Criteria", 'should-ask'),
+      createQ('want_hidden', "Is there something you want but feel embarrassed or conflicted about wanting?", "This is a judgment-free zone. Naming it doesn't mean you have to chase it — it just helps the document tell the truth.", "Hidden Wants", 'optional'),
+    ],
+    responses: []
+  },
+  {
+    id: 'p-step-4',
+    name: 'Daily Life & Systems',
+    subtitle: 'Routines, rhythms, and how your days actually work',
+    questions: [
+      createQ('daily_morning', "Walk me through your typical morning from the moment you wake up to the moment you start \"working\" or doing your main thing.", "Every detail. When do you check your phone? How long do you stay in bed? What do you eat?", "Morning", 'must-ask'),
+      createQ('daily_evening', "Walk me through your typical evening from when you stop working to when you fall asleep.", "Same level of detail. When do you eat? Screen time? How do you wind down?", "Evening", 'must-ask'),
+      createQ('daily_weekly', "Is there a rhythm to your week? Certain days for certain things? Or is every day improvised?", "What's structured vs. chaotic? Which days feel good and which feel wasted?", "Weekly Rhythm", 'should-ask'),
+      createQ('daily_tools', "What tools, apps, or systems do you currently use to manage your life? (Calendar, to-do lists, budgets, etc.)", "What's working? What's a mess? What do you keep trying and abandoning?", "Tools & Systems", 'should-ask'),
+      createQ('daily_decisions', "What decisions do you waste the most mental energy on repeatedly?", "Meals? What to wear? How to spend free time? Work priorities? These add up.", "Decision Fatigue", 'should-ask'),
+      createQ('daily_motivation', "What actually motivates you in real life — not what \"should\" motivate you?", "Deadlines? Collaboration? Competition? Play? Public commitment? Quiet systems? Give real examples of times you followed through and what drove it.", "Motivation Style", 'should-ask'),
+      createQ('daily_constraints', "What hard constraints do you have that are non-negotiable right now?", "Work hours, caregiving, health limits, commute, custody schedules, financial obligations. The stuff your life has to work around, not through force of will.", "Constraints", 'should-ask'),
+      createQ('daily_environments', "Describe the physical spaces where you spend most of your time. Are they helping or hurting you?", "Your home, workspace, car. Do they feel organized or chaotic? Energizing or draining?", "Environments", 'optional'),
+      createQ('daily_time_audit', "Where does your time actually go in a typical week? Estimate hours: work, commute, screens, sleep, exercise, relationships, solo time, chores.", "Don't guess optimistically. Track a real week if you can.", "Time Audit", 'optional'),
+    ],
+    responses: []
+  },
+  {
+    id: 'p-step-5',
+    name: 'Relationships & Community',
+    subtitle: 'Your people, your gaps, and your boundaries',
+    questions: [
+      createQ('rel_inner_circle', "Who are the 3-5 people you talk to most? What role does each one play in your life?", "Not who you should talk to — who you actually do. Are those the right people?", "Inner Circle", 'must-ask'),
+      createQ('rel_missing', "What's missing in your relationships or social life right now?", "Depth? Fun? Accountability? Someone who gets it? A community?", "Missing", 'must-ask'),
+      createQ('rel_difficult', "Is there a relationship that's draining you or creating ongoing friction? What would resolving it look like?", "You don't have to name names. But be specific about the dynamic.", "Difficult", 'should-ask'),
+      createQ('rel_communication', "How do you typically communicate with the people closest to you? What works? What doesn't?", "Are you the texter? The caller? The one who avoids hard conversations?", "Communication", 'should-ask'),
+      createQ('rel_support', "When things get hard, who do you go to? Do you actually go to anyone?", "If the answer is \"no one,\" that's important information.", "Support", 'should-ask'),
+      createQ('rel_community', "Are you part of any communities, groups, or regular gatherings that matter to you?", "Church, gym crew, book club, online group, mastermind — anything where you show up regularly.", "Community", 'optional'),
+      createQ('rel_boundaries', "Where do you struggle to set boundaries with people? What happens when you do?", "The places where you say yes when you mean no.", "Boundaries", 'optional'),
+    ],
+    responses: []
+  },
+  {
+    id: 'p-step-6',
+    name: 'Health & Body',
+    subtitle: 'Physical state, habits, and what\'s real',
+    questions: [
+      createQ('health_current', "Honest assessment: how do you feel physically on most days? Energy, sleep, pain, vitality?", "1-10 doesn't cut it. Describe what a normal day feels like in your body.", "Current State", 'must-ask'),
+      createQ('health_exercise', "What's your current relationship with exercise? What have you done in the past that worked?", "Not what you should do. What you actually do — and what you've actually stuck with before.", "Exercise", 'must-ask'),
+      createQ('health_food', "How do you eat? Not the ideal — the reality. What's your relationship with food like?", "Meal prep king? Fast food survivor? Stress eater? No judgment, just truth.", "Food", 'should-ask'),
+      createQ('health_sleep', "How do you sleep? What time do you go to bed, wake up, and how do you feel when you do?", "Quality matters more than hours. What's disrupting your sleep if anything?", "Sleep", 'should-ask'),
+      createQ('health_mental', "How are you doing mentally and emotionally? Any patterns you've noticed — anxiety, depression, burnout cycles?", "This isn't therapy. But if there are patterns affecting your life, they belong in the document.", "Mental Health", 'should-ask'),
+      createQ('health_substances', "Do you use alcohol, caffeine, nicotine, or anything else regularly? What role does it play?", "Not a morality question. Just understanding what's in the system and why.", "Substances", 'optional'),
+      createQ('health_medical', "Anything medical or physical you're managing that affects your daily life or plans?", "Chronic conditions, medications, injuries — things that affect what's realistic.", "Medical", 'optional'),
+    ],
+    responses: []
+  },
+  {
+    id: 'p-step-7',
+    name: 'Money & Resources',
+    subtitle: 'Financial reality, relationship with money, and goals',
+    questions: [
+      createQ('money_current', "Give me the honest snapshot: income, savings, debt, monthly burn rate. Ballpark is fine.", "You don't need exact numbers. But \"fine\" vs. \"struggling\" vs. \"comfortable\" isn't specific enough.", "Current State", 'must-ask'),
+      createQ('money_relationship', "What's your relationship with money? Does it stress you out, motivate you, bore you?", "How you feel about money often matters more than how much you have.", "Relationship", 'must-ask'),
+      createQ('money_goals', "What are your financial goals in the next 1-3 years? What would \"enough\" look like?", "A number? A feeling? A lifestyle? Define what winning looks like financially.", "Goals", 'should-ask'),
+      createQ('money_spending', "Where does your money go that you wish it didn't? Where do you not spend enough?", "The subscriptions you forgot about. The things you keep saying you'll invest in but don't.", "Spending Patterns", 'should-ask'),
+      createQ('money_income', "Are you happy with your income? If not, what would it take to change it? What's realistic?", "Career move? Side hustle? Asking for a raise? Changing fields entirely?", "Income Potential", 'optional'),
+      createQ('money_systems', "How do you currently manage money? Budget? Apps? Spreadsheet? Vibes?", "What system do you use, and is it actually working?", "Financial Systems", 'optional'),
+    ],
+    responses: []
+  },
+  {
+    id: 'p-step-8',
+    name: 'Voice & Communication',
+    subtitle: 'How you sound, how you want to be spoken to',
+    questions: [
+      createQ('voice_natural', "How do you naturally talk? Are you formal, casual, sarcastic, warm, blunt, careful?", "Think about how you text your best friend vs. how you email your boss. Where on that spectrum is the real you?", "How You Sound", 'must-ask'),
+      createQ('voice_samples', "Share 2-3 examples of how you actually write — texts, emails, social posts, journal entries. Things that sound like you.", "Pick things where you thought \"yeah, that's my voice.\" Not your professional voice unless that IS your voice.", "Writing Samples", 'must-ask'),
+      createQ('voice_words_use_personal', "What words, phrases, or expressions do you use all the time?", "The stuff people would recognize as uniquely you. Catchphrases, recurring metaphors, verbal tics.", "Words You Use", 'should-ask'),
+      createQ('voice_words_avoid_personal', "What language feels fake or wrong when it comes out of your mouth?", "Corporate speak? Self-help jargon? Certain phrases that make you cringe?", "Words You Hate", 'should-ask'),
+      createQ('voice_coaching_style', "When you're trying to change something in your life, how do you like to be spoken to?", "Gentle or direct? More encouragement or more challenge? Short bullet points or longer reflection? What lands for you and what makes you shut down?", "Coaching Style", 'must-ask'),
+      createQ('voice_humor_personal', "Do you use humor? What kind? When does it show up and when does it disappear?", "Dry? Dark? Self-deprecating? Dad jokes? Or mostly serious?", "Humor", 'optional'),
+      createQ('voice_conflict', "How do you handle disagreements or uncomfortable conversations?", "Avoid? Confront? Joke through it? Shut down? Write a letter? Depends on the person?", "Conflict Style", 'optional'),
+    ],
+    responses: []
+  },
+  {
+    id: 'p-step-9',
+    name: 'Beliefs & Frameworks',
+    subtitle: 'Worldview, inner critic, and what you\'ve learned',
+    questions: [
+      createQ('belief_worldview', "What do you believe about how the world works? What principles guide your decisions?", "Not the inspirational poster. The actual operating system running in your head.", "Worldview", 'must-ask'),
+      createQ('belief_inner_critic', "If your inner critic had a voice, what would it say to you most often? In exact words.", "The specific phrases and tone it uses. Where do you think this voice came from originally?", "Inner Critic", 'must-ask'),
+      createQ('belief_changed', "What's something you used to believe strongly that you've changed your mind about?", "The pivot tells more about you than the current position.", "Changed Minds", 'should-ask'),
+      createQ('belief_lessons', "What's the hardest lesson you've learned in life so far? How did you learn it?", "The one that actually changed your behavior, not just your thinking.", "Hard Lessons", 'should-ask'),
+      createQ('belief_fear', "What are you most afraid of? Not spiders — the real stuff. Failure? Being seen? Being alone? Wasting time?", "The fear that actually drives behavior when you're being honest with yourself.", "Fear", 'should-ask'),
+      createQ('belief_spiritual', "Do you have a spiritual practice, faith tradition, or philosophical framework that matters to you?", "This can be organized religion, meditation, stoicism, \"I don't know but I'm curious\" — whatever's true.", "Spirituality", 'optional'),
+      createQ('belief_purpose', "Do you have a sense of purpose or meaning? If so, how would you articulate it? If not, is that something you're looking for?", "Big question. Imperfect answers welcome.", "Purpose", 'optional'),
+    ],
+    responses: []
+  },
+  {
+    id: 'p-step-10',
+    name: 'Skills & Interests',
+    subtitle: 'What you\'re good at, curious about, and not using',
+    questions: [
+      createQ('skills_natural', "What are you naturally good at — things that come easy to you that others seem to struggle with?", "Not your job skills unless those overlap. What do people come to you for help with?", "Natural Talents", 'must-ask'),
+      createQ('skills_learned', "What skills have you deliberately developed? What took effort to get good at?", "The things you worked for vs. the things that came free.", "Learned Skills", 'should-ask'),
+      createQ('skills_curiosities', "What are you currently curious about? What would you learn if you had unlimited time?", "Active interests, not \"I should\" interests.", "Curiosities", 'should-ask'),
+      createQ('skills_creative', "Do you have any creative outlets? Things you make, build, write, play, or design?", "Active or dormant. Something you do now or something you used to do and miss.", "Creative Outlets", 'optional'),
+      createQ('skills_consumption', "What do you consume? Books, podcasts, YouTube, music, games? What patterns do you notice?", "What you're drawn to reveals what you're thinking about.", "Consumption", 'optional'),
+      createQ('skills_unused', "Is there a skill or talent you have that you're not using right now? Something that's going to waste?", "The thing that's sitting on the shelf.", "Unused", 'optional'),
+    ],
+    responses: []
+  },
+  {
+    id: 'p-step-11',
+    name: 'Documentation & Digital Life',
+    subtitle: 'Where your information lives and what you need',
+    questions: [
+      createQ('doc_current_personal', "Where do you currently keep important information? Passwords, contacts, goals, ideas, health records?", "In your head? Notes app? Scattered across 14 platforms? Be honest about the mess.", "Current State", 'must-ask'),
+      createQ('doc_digital', "What's your online presence? Social media, profiles, websites — what would someone find if they googled you?", "Is it accurate? Outdated? Embarrassing? Does it represent who you are now?", "Digital Footprint", 'should-ask'),
+      createQ('doc_recurring', "What problems come up over and over in your life that better documentation or systems could solve?", "Forgetting appointments? Losing track of goals? Not having the right info when you need it?", "Recurring Problems", 'should-ask'),
+      createQ('doc_ai_usage', "How do you currently use AI or technology to help manage your life? What's working and what isn't?", "ChatGPT, Claude, Siri, smart home, budgeting apps — whatever tools you're already using.", "AI Usage", 'should-ask'),
+      createQ('doc_ideal', "If you had a perfect personal knowledge system — something that knew everything about you and could help you make decisions — what would you use it for first?", "The killer use case. The thing that would make you say \"this was worth it.\"", "Ideal System", 'must-ask'),
+      createQ('doc_preferred_format', "How would you most like your personal gospel document to be written?", "Straightforward and practical? Poetic and reflective? Numbered principles? Letter to your future self? Describe what would feel like YOU.", "Preferred Format", 'must-ask'),
+    ],
+    responses: []
+  },
+];
