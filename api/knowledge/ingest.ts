@@ -1,11 +1,13 @@
-// ingest.ts — v1.1.0 — 2026-02-15
+// ingest.ts — v1.4.0 — 2026-02-21
 // Ingests markdown files from data/documents/, chunks them, stores in Vercel KV
 
 import { createClient } from '@vercel/kv';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { chunkByHeaders } from '../../src/lib/chunker';
+import { chunkByHeaders } from '../../src/lib/chunker.js';
 import fs from 'fs';
 import path from 'path';
+// ESM package ("type":"module") — use process.cwd() which resolves to /var/task in Vercel
+// includeFiles in vercel.json copies data/documents/ to /var/task/data/documents/
 
 const kv = createClient({
   url: process.env.STORAGE_REST_API_URL!,
@@ -18,12 +20,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const authHeader = req.headers['authorization'];
+  if (!process.env.CRON_SECRET) {
+    console.error('[Ingest] CRON_SECRET not configured');
+    return res.status(500).json({ error: 'Server misconfiguration' });
+  }
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
-    const docsDir = path.join(process.cwd(), 'data', 'documents');
+    const docsDir = path.join(process.cwd(), 'data/documents');
     const files = fs.readdirSync(docsDir).filter(f => f.endsWith('.md'));
 
     const results: Array<{ file: string; chunks: number; words: number }> = [];

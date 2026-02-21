@@ -11,6 +11,8 @@
   "dependencies": {
     "@google/genai": "^1.31.0",
     "@vercel/kv": "^3.0.0",
+    "google-auth-library": "^10.5.0",
+    "google-spreadsheet": "^5.2.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1"
   },

@@ -1,10 +1,10 @@
-import { createClient } from '@vercel/kv';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+/**
+ * Load user progress from Google Sheets
+ * v2.0.0 — 2026-02-21 (migrated from Vercel KV/Redis)
+ */
 
-const kv = createClient({
-  url: process.env.STORAGE_REST_API_URL!,
-  token: process.env.STORAGE_REST_API_TOKEN!,
-});
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { loadUserProgress } from '../lib/sheets.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -18,10 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const key = `overlap:${normalizedEmail}`;
-
-    const data = await kv.get(key);
+    const data = await loadUserProgress(email);
 
     if (data) {
       return res.status(200).json({ exists: true, data });

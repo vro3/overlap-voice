@@ -1,10 +1,10 @@
-import { createClient } from '@vercel/kv';
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+/**
+ * Save user progress to Google Sheets
+ * v2.0.0 — 2026-02-21 (migrated from Vercel KV/Redis)
+ */
 
-const kv = createClient({
-  url: process.env.STORAGE_REST_API_URL!,
-  token: process.env.STORAGE_REST_API_TOKEN!,
-});
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { saveUserProgress } from '../lib/sheets.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -22,20 +22,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Progress data is required' });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const key = `overlap:${normalizedEmail}`;
-
-    const data = {
-      ...progress,
-      email: normalizedEmail,
-      lastSaved: new Date().toISOString(),
-    };
-
-    await kv.set(key, data);
+    const lastSaved = await saveUserProgress(email, progress);
 
     return res.status(200).json({
       success: true,
-      lastSaved: data.lastSaved,
+      lastSaved,
     });
   } catch (error) {
     console.error('Error saving user data:', error);

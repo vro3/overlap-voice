@@ -69,11 +69,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate, onRes
                 <div className="text-[14px] text-primary font-medium mb-2">Storage Mode</div>
                 <select
                   value={settings.storageMode}
-                  onChange={(e) => onUpdate('storageMode', e.target.value as 'localStorage' | 'vercelKV')}
+                  onChange={(e) => onUpdate('storageMode', e.target.value as 'localStorage' | 'googleSheets')}
                   className="w-full px-3 py-2 bg-background border border-border rounded-lg text-primary text-[14px] focus:border-accent outline-none"
                 >
                   <option value="localStorage">Local Storage (no account needed)</option>
-                  <option value="vercelKV">Vercel KV (cloud sync)</option>
+                  <option value="googleSheets">Google Sheets (cloud sync)</option>
                 </select>
               </div>
               <div className="py-3">

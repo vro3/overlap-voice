@@ -9,9 +9,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
     reviewScreenEnabled: true,
 
     // Persistence
-    storageMode: 'vercelKV',
+    storageMode: 'googleSheets',
     autoSaveEnabled: true,
-    autoSaveDebounceMs: 500,
+    autoSaveDebounceMs: 3000,
 
     // Display
     showTierIndicators: false,

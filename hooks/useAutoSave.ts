@@ -28,7 +28,7 @@ export function useAutoSave(settings: AppSettings) {
 
         // Secondary: Attempt server save (fire-and-forget, non-blocking)
         // Wrapped in setTimeout to prevent blocking the UI
-        if (settings.storageMode === 'vercelKV' && data.email) {
+        if (settings.storageMode === 'googleSheets' && data.email) {
           setTimeout(() => {
             fetch('/api/user/save', {
               method: 'POST',
