@@ -1,5 +1,41 @@
-.vercel
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+.vercel/
+
+# Environment variables
+.env
+.env.local
 .env*.local
-node_modules
-dist
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+
+# Secrets & Credentials
+*-credentials.json
+*-service-account.json
+*-firebase-adminsdk-*.json
+credentials/
+secrets/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
+Thumbs.db
