@@ -114,6 +114,7 @@ const ReviewScreen: React.FC<ReviewScreenProps> = ({ sessions, answers, routerAn
           </button>
           <button
             onClick={onGenerate}
+            data-tour="overlap-review"
             className="px-8 py-4 bg-accent text-background font-bold text-lg rounded-xl hover:bg-accent/90 transition-colors"
           >
             Generate My Output

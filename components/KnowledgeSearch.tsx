@@ -48,7 +48,7 @@ export function KnowledgeSearch() {
     <div style={{ maxWidth: 700, margin: '0 auto', padding: 24 }}>
       <h2 style={{ marginBottom: 16, fontSize: 20, fontWeight: 600 }}>Knowledge Base Search</h2>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+      <div data-tour="overlap-search" style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
         <input
           type="text"
           value={query}

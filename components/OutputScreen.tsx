@@ -34,6 +34,7 @@ const OutputScreen: React.FC<OutputScreenProps> = ({ email, sessions, answers, r
 
         <button
           onClick={handleDownload}
+          data-tour="overlap-output"
           className="inline-flex items-center gap-3 px-8 py-4 bg-accent text-background font-bold text-lg rounded-xl hover:bg-accent/90 transition-colors mb-6"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

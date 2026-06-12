@@ -12,6 +12,7 @@ interface QuestionCardProps {
   settings: AppSettings;
   isFirstInSection: boolean;
   sectionQuestionCount?: number;
+  tourAnchorVoice?: boolean;   // tag the mic button for the demo walkthrough
 }
 
 const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -23,6 +24,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   settings,
   isFirstInSection,
   sectionQuestionCount,
+  tourAnchorVoice,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [aiStatus, setAiStatus] = useState<'idle' | 'processing' | 'done'>('idle');
@@ -172,6 +174,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                 {showMic && (
                   <button
                     onClick={isListening ? stopListening : startListening}
+                    data-tour={tourAnchorVoice ? 'overlap-voice' : undefined}
                     className={`flex-shrink-0 flex flex-col items-center justify-center gap-1 px-4 py-3 rounded-xl font-medium transition-all duration-200 min-h-[48px] ${
                       isListening
                         ? 'bg-recording text-white animate-pulse-slow min-w-[100px]'

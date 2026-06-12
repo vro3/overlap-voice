@@ -52,7 +52,7 @@ const StepView: React.FC<StepViewProps> = ({
           const isFirstInSection = index === 0 || q.section !== visibleQuestions[index - 1].section;
           const sectionCount = visibleQuestions.filter(sq => sq.section === q.section).length;
 
-          return (
+          const card = (
             <QuestionCard
               key={q.id}
               question={q}
@@ -61,8 +61,14 @@ const StepView: React.FC<StepViewProps> = ({
               settings={settings}
               isFirstInSection={isFirstInSection}
               sectionQuestionCount={isFirstInSection ? sectionCount : undefined}
+              tourAnchorVoice={index === 0}
             />
           );
+
+          // Anchor the first card so the demo walkthrough can spotlight it.
+          return index === 0
+            ? <div key={q.id} data-tour="overlap-question">{card}</div>
+            : card;
         })}
       </div>
 

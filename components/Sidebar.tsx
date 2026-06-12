@@ -117,7 +117,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <nav className="flex-1 overflow-y-auto py-4 px-4">
           {/* Mode Tabs */}
           {onModeChange && (
-            <div className="mx-1 mb-4 flex bg-background rounded-lg p-0.5 border border-border-subtle">
+            <div data-tour="overlap-mode" className="mx-1 mb-4 flex bg-background rounded-lg p-0.5 border border-border-subtle">
               <button
                 onClick={() => onModeChange('business')}
                 className={`flex-1 py-2 text-[11px] font-semibold rounded-md transition-all duration-200 ${
@@ -147,7 +147,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </span>
           </div>
 
-          <div className="space-y-0.5 mb-4">
+          <div data-tour="overlap-sessions" className="space-y-0.5 mb-4">
             {sessions.map((session, index) => {
               const sectionAnswered = session.questions.filter(q => answers[q.id]?.trim()).length;
               const isComplete = sectionAnswered === session.questions.length && session.questions.length > 0;
@@ -189,7 +189,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Progress */}
-          <div className="mx-3 mt-4 bg-surface rounded-xl p-4 border border-border-subtle">
+          <div data-tour="overlap-progress" className="mx-3 mt-4 bg-surface rounded-xl p-4 border border-border-subtle">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] text-muted">Overall</span>
               <span className="text-[11px] font-medium text-primary">{progressPercent}%</span>
@@ -269,6 +269,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex gap-2 mb-3">
             <button
               onClick={onExport}
+              data-tour="overlap-export"
               className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-surface border border-border-subtle text-primary text-[12px] font-medium rounded-xl hover:bg-surface-hover transition-all"
               title="Export as Markdown knowledge file"
             >

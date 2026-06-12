@@ -8,9 +8,10 @@ interface MagicLinkProps {
   settings: AppSettings;
   initialRouterAnswer?: string;
   onAudioSettings?: () => void;
+  onWatchDemo?: () => void;
 }
 
-const MagicLink: React.FC<MagicLinkProps> = ({ onComplete, onSkip, settings, initialRouterAnswer, onAudioSettings }) => {
+const MagicLink: React.FC<MagicLinkProps> = ({ onComplete, onSkip, settings, initialRouterAnswer, onAudioSettings, onWatchDemo }) => {
   const [email, setEmail] = useState('');
   const [routerAnswer, setRouterAnswer] = useState(initialRouterAnswer || '');
   const [error, setError] = useState('');
@@ -144,6 +145,20 @@ const MagicLink: React.FC<MagicLinkProps> = ({ onComplete, onSkip, settings, ini
         </form>
 
         <p className="text-muted text-sm text-center mt-6">No account needed. Just your email so we can save your answers.</p>
+
+        {onWatchDemo && (
+          <div className="mt-8 pt-6 border-t border-border-subtle text-center">
+            <p className="text-muted text-[13px] mb-3">First time here? See how it works.</p>
+            <button
+              type="button"
+              onClick={onWatchDemo}
+              className="inline-flex items-center gap-2 px-5 py-3 bg-surface border border-accent/40 text-accent text-[14px] font-semibold rounded-xl hover:bg-accent/10 hover:border-accent transition-all"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+              Watch a 60-second demo
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

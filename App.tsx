@@ -13,6 +13,70 @@ import OutputScreen from './components/OutputScreen';
 import SettingsPanel from './components/SettingsPanel';
 import AudioSettingsModal from './components/AudioSettingsModal';
 import { KnowledgeSearch } from './components/KnowledgeSearch';
+import { DemoTour, DemoStep } from './components/DemoTour';
+import { DEMO_ANSWERS, DEMO_ROUTER_ANSWER, DEMO_EMAIL } from './data/demoData';
+
+// Guided demo walkthrough. Each step drives the app to the right screen/mode
+// and spotlights an element ([data-tour=...]) with plain-English narration.
+interface DemoStepConfig extends DemoStep {
+  screen: AppScreen;
+  mode?: ExtractionMode;
+  sessionId?: string;
+}
+
+const DEMO_STEPS: DemoStepConfig[] = [
+  {
+    screen: 'questions', sessionId: 'step-1',
+    title: 'Welcome to The Overlap',
+    body: "A 60-second look at how it pulls the expertise out of your head and into something an AI can actually use. This is an example expert's session — nothing here is saved.",
+  },
+  {
+    screen: 'questions', sessionId: 'step-1', anchor: 'overlap-sessions',
+    title: 'The interview, in sections',
+    body: 'Who you are, what you do, how you price, how you sound. Work through them in any order — each one pulls out a different part of what you know.',
+  },
+  {
+    screen: 'questions', sessionId: 'step-1', anchor: 'overlap-question',
+    title: 'Real questions, not a form',
+    body: "Each one is built to surface what you'd never think to write down — the judgment calls and instincts that live only in your head.",
+  },
+  {
+    screen: 'questions', sessionId: 'step-1', anchor: 'overlap-voice',
+    title: "Don't type — talk",
+    body: 'Hit Talk and just answer out loud, the way you would in a real conversation. It transcribes as you speak, so the words stay in your actual voice.',
+  },
+  {
+    screen: 'questions', sessionId: 'step-1', anchor: 'overlap-progress',
+    title: 'Saved as you go',
+    body: 'Your answers save automatically. Step away and come back whenever — you pick up right where you left off.',
+  },
+  {
+    screen: 'questions', sessionId: 'step-1', anchor: 'overlap-mode',
+    title: 'Two ways to use it',
+    body: 'Extract your business knowledge, or map your personal life and goals. Same idea, different questions.',
+  },
+  {
+    screen: 'review', anchor: 'overlap-review',
+    title: 'Review before you generate',
+    body: "When you're done, look it all over and tweak any answer. Nothing leaves until you say so.",
+  },
+  {
+    screen: 'output', anchor: 'overlap-output',
+    title: 'One clean knowledge file',
+    body: 'The Overlap turns every answer into a single Markdown file — a knowledge base any AI can read to understand you and sound like you.',
+  },
+  {
+    screen: 'search', anchor: 'overlap-search',
+    title: 'Then ask it anything',
+    body: 'Search your own knowledge base in plain language and get answers grounded in what you actually said — with the sources behind them.',
+  },
+  {
+    screen: 'output',
+    title: "That's The Overlap",
+    body: 'Now do it with your own expertise. Exit the demo and start — your real answers are private, and saved just for you.',
+    cta: 'Finish',
+  },
+];
 
 const App: React.FC = () => {
   const { settings, updateSetting, resetSettings } = useSettings();
@@ -33,6 +97,10 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAudioSettings, setShowAudioSettings] = useState(false);
+
+  // Demo walkthrough (guided spotlight tour over seeded example answers).
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoStep, setDemoStep] = useState(0);
 
   const handleModeChange = useCallback((mode: ExtractionMode) => {
     setExtractionMode(mode);
@@ -68,9 +136,9 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Auto-save on changes
+  // Auto-save on changes (never while the demo is driving the screens)
   useEffect(() => {
-    if (currentScreen === 'magic-link') return;
+    if (currentScreen === 'magic-link' || demoMode) return;
     saveProgress({
       email,
       currentStep: activeSessionId,
@@ -80,7 +148,17 @@ const App: React.FC = () => {
       aiResponses: {},
       lastSaved: new Date().toISOString(),
     });
-  }, [answers, routerAnswer, activeSessionId, currentScreen, email]);
+  }, [answers, routerAnswer, activeSessionId, currentScreen, email, demoMode]);
+
+  // Demo walkthrough: each step drives the app to the right screen/mode.
+  useEffect(() => {
+    if (!demoMode) return;
+    const step = DEMO_STEPS[demoStep];
+    if (!step) return;
+    if (step.mode) setExtractionMode(step.mode);
+    if (step.sessionId) setActiveSessionId(step.sessionId);
+    setCurrentScreen(step.screen);
+  }, [demoMode, demoStep]);
 
   // --- Navigation Helpers ---
 
@@ -217,6 +295,21 @@ const App: React.FC = () => {
     setCurrentScreen('magic-link');
   }, []);
 
+  // --- Demo handlers ---
+  const startDemo = useCallback(() => {
+    setDemoStep(0);
+    setDemoMode(true);
+  }, []);
+
+  const exitDemo = useCallback(() => {
+    setDemoMode(false);
+    setDemoStep(0);
+    setCurrentScreen('magic-link');
+  }, []);
+
+  const nextDemo = useCallback(() => setDemoStep(s => Math.min(s + 1, DEMO_STEPS.length - 1)), []);
+  const backDemo = useCallback(() => setDemoStep(s => Math.max(s - 1, 0)), []);
+
   const handleClearProgress = useCallback(() => {
     setAnswers({});
     setRouterAnswer('');
@@ -247,8 +340,26 @@ const App: React.FC = () => {
 
   const activeSession = sessions[activeSessionIndex] || sessions[0];
 
+  // While the demo is running, overlay seeded example answers in-memory only —
+  // the user's real answers/email are never touched, and restore on exit.
+  const noop = () => {};
+  const effectiveAnswers = demoMode ? DEMO_ANSWERS : answers;
+  const effectiveRouter = demoMode ? DEMO_ROUTER_ANSWER : routerAnswer;
+  const effectiveEmail = demoMode ? DEMO_EMAIL : email;
+
   return (
     <>
+      {/* Guided demo walkthrough (spotlight overlay, sits above every screen) */}
+      {demoMode && (
+        <DemoTour
+          steps={DEMO_STEPS}
+          stepIndex={demoStep}
+          onNext={nextDemo}
+          onBack={backDemo}
+          onExit={exitDemo}
+        />
+      )}
+
       {/* Settings Panel (overlay, any screen) */}
       {showSettings && (
         <SettingsPanel
@@ -280,6 +391,7 @@ const App: React.FC = () => {
           settings={settings}
           initialRouterAnswer={routerAnswer}
           onAudioSettings={() => setShowAudioSettings(true)}
+          onWatchDemo={startDemo}
         />
       )}
 
@@ -294,10 +406,10 @@ const App: React.FC = () => {
           <Sidebar
             sessions={sessions}
             activeSessionId={activeSessionId}
-            onSelectSession={handleSelectSession}
-            answers={answers}
+            onSelectSession={demoMode ? noop : handleSelectSession}
+            answers={effectiveAnswers}
             settings={settings}
-            userEmail={email || undefined}
+            userEmail={effectiveEmail || undefined}
             onLogout={email ? handleLogout : undefined}
             onOpenSettings={handleOpenSettings}
             onExport={handleExport}
@@ -313,8 +425,8 @@ const App: React.FC = () => {
               session={activeSession}
               stepIndex={activeSessionIndex}
               totalSteps={sessions.length}
-              answers={answers}
-              onAnswerChange={handleAnswerChange}
+              answers={effectiveAnswers}
+              onAnswerChange={demoMode ? noop : handleAnswerChange}
               settings={settings}
               onNextStep={handleNextStep}
               onPrevStep={handlePrevStep}
@@ -329,23 +441,23 @@ const App: React.FC = () => {
       {currentScreen === 'review' && (
         <ReviewScreen
           sessions={sessions}
-          answers={answers}
-          routerAnswer={routerAnswer}
-          onEditAnswer={handleAnswerChange}
-          onGenerate={handleGenerate}
-          onBack={handleBackToQuestions}
+          answers={effectiveAnswers}
+          routerAnswer={effectiveRouter}
+          onEditAnswer={demoMode ? noop : handleAnswerChange}
+          onGenerate={demoMode ? noop : handleGenerate}
+          onBack={demoMode ? noop : handleBackToQuestions}
         />
       )}
 
       {currentScreen === 'output' && (
         <>
           <OutputScreen
-            email={email || 'user'}
+            email={effectiveEmail || 'user'}
             sessions={sessions}
-            answers={answers}
-            routerAnswer={routerAnswer}
+            answers={effectiveAnswers}
+            routerAnswer={effectiveRouter}
             aiEnabled={settings.aiAnalysisEnabled}
-            onStartOver={handleStartOver}
+            onStartOver={demoMode ? noop : handleStartOver}
           />
           <div style={{ textAlign: 'center', paddingBottom: 32 }}>
             <button
