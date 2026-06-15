@@ -1,25 +1,21 @@
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
-    // Use Vercel's env vars first, fallback to local .env
-    const apiKey = process.env.GEMINI_API_KEY || env.GEMINI_API_KEY;
-    return {
-      server: {
-        port: 3000,
-        host: '0.0.0.0',
-      },
-      plugins: [react()],
-      define: {
-        'process.env.API_KEY': JSON.stringify(apiKey),
-        'process.env.GEMINI_API_KEY': JSON.stringify(apiKey)
-      },
-      resolve: {
-        alias: {
-          '@': path.resolve(__dirname, '.'),
-        }
-      }
-    };
+// v2.0.0 — 2026-06-15
+// Removed the process.env.* `define` block: no client code referenced those
+// vars (the Gemini key lives only in the serverless /api functions, read from
+// process.env at runtime on Vercel), so the define was dead config and a
+// standing footgun. Tailwind is compiled via postcss.config.js (auto-detected).
+export default defineConfig({
+  server: {
+    port: 3000,
+    host: '0.0.0.0',
+  },
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, '.'),
+    },
+  },
 });

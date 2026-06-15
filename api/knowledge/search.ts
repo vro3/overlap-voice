@@ -1,19 +1,41 @@
-// search.ts — v1.1.0 — 2026-02-15
+// search.ts — v1.2.0 — 2026-06-15
 // Searches chunked knowledge base using keyword matching + Gemini answer generation
+// v1.2.0: batched KV reads (mget) instead of serial per-chunk round-trips; origin/rate guards.
 
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@vercel/kv';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { rateLimit, checkOrigin } from '../lib/guard.js';
+
+export const config = {
+  api: { bodyParser: { sizeLimit: '1mb' } },
+};
 
 const kv = createClient({
   url: process.env.STORAGE_REST_API_URL!,
   token: process.env.STORAGE_REST_API_TOKEN!,
 });
 
+// Read many keys in batched mget calls (one round-trip per batch) rather than
+// one round-trip per key. Keeps a large knowledge base from fanning out into
+// thousands of serial reads per query.
+async function mgetAll<T>(keys: string[], batchSize = 128): Promise<(T | null)[]> {
+  const out: (T | null)[] = [];
+  for (let i = 0; i < keys.length; i += batchSize) {
+    const batch = keys.slice(i, i + batchSize);
+    if (batch.length === 0) continue;
+    const vals = (await kv.mget(...batch)) as (T | null)[];
+    out.push(...vals);
+  }
+  return out;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'POST required' });
   }
+  if (!checkOrigin(req, res)) return;
+  if (!(await rateLimit(req, res, { key: 'kb-search', limit: 30, windowSec: 60 }))) return;
 
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
@@ -35,28 +57,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: 'No knowledge base ingested. Run POST /api/knowledge/ingest first.' });
     }
 
-    // 2. Search chunks by keyword matching
+    // 2. Search chunks by keyword matching.
+    // Batch-load every doc, then every chunk, in mget batches — no per-chunk serial reads.
     const queryTerms = sanitizedQuery.toLowerCase().split(/\s+/).filter((t: string) => t.length > 2);
-    const matchedChunks: Array<{ chunk: any; score: number }> = [];
 
-    for (const doc of index.documents) {
-      const docData = await kv.get<{ chunkIds?: string[] }>(`doc:${doc.file}`);
-      if (!docData) continue;
+    type Chunk = {
+      sectionTitle: string;
+      content: string;
+      sourceFile: string;
+      lineStart: number;
+      lineEnd: number;
+    };
 
-      for (const chunkId of (docData.chunkIds || [])) {
-        const chunk = await kv.get<{ sectionTitle: string; content: string; sourceFile: string; lineStart: number; lineEnd: number }>(`chunk:${chunkId}`);
-        if (!chunk) continue;
+    const docKeys = index.documents.map((d) => `doc:${d.file}`);
+    const docDatas = await mgetAll<{ chunkIds?: string[] }>(docKeys);
+    const chunkKeys = docDatas.flatMap((d) => (d?.chunkIds || []).map((id) => `chunk:${id}`));
+    const chunks = await mgetAll<Chunk>(chunkKeys);
 
-        const contentLower = `${chunk.sectionTitle} ${chunk.content}`.toLowerCase();
-        let score = 0;
-        for (const term of queryTerms) {
-          const matches = contentLower.split(term).length - 1;
-          score += matches;
-        }
+    const matchedChunks: Array<{ chunk: Chunk; score: number }> = [];
+    for (const chunk of chunks) {
+      if (!chunk) continue;
 
-        if (score > 0) {
-          matchedChunks.push({ chunk, score });
-        }
+      const contentLower = `${chunk.sectionTitle} ${chunk.content}`.toLowerCase();
+      let score = 0;
+      for (const term of queryTerms) {
+        const matches = contentLower.split(term).length - 1;
+        score += matches;
+      }
+
+      if (score > 0) {
+        matchedChunks.push({ chunk, score });
       }
     }
 

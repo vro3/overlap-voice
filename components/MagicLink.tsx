@@ -16,14 +16,23 @@ const MagicLink: React.FC<MagicLinkProps> = ({ onComplete, onSkip, settings, ini
   const [routerAnswer, setRouterAnswer] = useState(initialRouterAnswer || '');
   const [error, setError] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const speechBaseRef = useRef(''); // routerAnswer captured when the mic starts
 
   const audioDeviceId = typeof window !== 'undefined' ? localStorage.getItem('selectedAudioDeviceId') || '' : '';
   const { isSupported, isListening, startListening, stopListening } = useSpeechRecognition({
     onTranscript: (text) => {
-      setRouterAnswer(prev => prev ? prev + ' ' + text : text);
+      // `text` is the full cumulative transcript for this session — replace the
+      // pre-mic base, never append each emission (that compounds duplicates).
+      const base = speechBaseRef.current;
+      setRouterAnswer(base ? base + ' ' + text : text);
     },
     audioDeviceId: audioDeviceId || undefined,
   });
+
+  const handleMicStart = () => {
+    speechBaseRef.current = routerAnswer;
+    startListening();
+  };
 
   const showMic = settings.voiceInputEnabled && isSupported;
 
@@ -96,7 +105,7 @@ const MagicLink: React.FC<MagicLinkProps> = ({ onComplete, onSkip, settings, ini
               {showMic && (
                 <button
                   type="button"
-                  onClick={isListening ? stopListening : startListening}
+                  onClick={isListening ? stopListening : handleMicStart}
                   className={`flex-shrink-0 flex flex-col items-center justify-center gap-1 px-5 py-3 rounded-xl font-medium transition-all min-h-[56px] ${
                     isListening
                       ? 'bg-recording text-white animate-pulse-slow min-w-[110px]'

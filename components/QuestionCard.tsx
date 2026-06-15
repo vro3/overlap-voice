@@ -27,6 +27,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   tourAnchorVoice,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const speechBaseRef = useRef(''); // field value captured when the mic starts
   const [aiStatus, setAiStatus] = useState<'idle' | 'processing' | 'done'>('idle');
   const [aiSummary, setAiSummary] = useState(existingResponse?.summary || '');
 
@@ -34,13 +35,19 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   const audioDeviceId = typeof window !== 'undefined' ? localStorage.getItem('selectedAudioDeviceId') || '' : '';
   const { isSupported: speechSupported, isListening, startListening, stopListening } = useSpeechRecognition({
     onTranscript: (text) => {
-      // Append speech to existing text
-      const current = value;
-      const newValue = current ? current + ' ' + text : text;
-      onChange(question.id, newValue);
+      // `text` is the full cumulative transcript for this session — replace the
+      // pre-mic base, never append each emission (that compounds duplicates).
+      const base = speechBaseRef.current;
+      onChange(question.id, base ? base + ' ' + text : text);
     },
     audioDeviceId: audioDeviceId || undefined,
   });
+
+  // Snapshot the current text before listening starts, then begin.
+  const handleMicStart = useCallback(() => {
+    speechBaseRef.current = value;
+    startListening();
+  }, [value, startListening]);
 
   const showMic = settings.voiceInputEnabled && speechSupported && question.inputType === 'textarea';
 
@@ -173,7 +180,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
 
                 {showMic && (
                   <button
-                    onClick={isListening ? stopListening : startListening}
+                    onClick={isListening ? stopListening : handleMicStart}
                     data-tour={tourAnchorVoice ? 'overlap-voice' : undefined}
                     className={`flex-shrink-0 flex flex-col items-center justify-center gap-1 px-4 py-3 rounded-xl font-medium transition-all duration-200 min-h-[48px] ${
                       isListening

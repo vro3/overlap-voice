@@ -1,6 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface UseSpeechRecognitionOptions {
+  /**
+   * Called with the FULL cumulative transcript for the current listening
+   * session (finalized text + live interim), re-emitted on every update.
+   * Consumers must REPLACE their field with this value, never append it on
+   * each call — appending each cumulative emission compounds duplicates.
+   * See QuestionCard / MagicLink for the base-snapshot replace pattern.
+   */
   onTranscript?: (text: string) => void;
   lang?: string;
   audioDeviceId?: string;

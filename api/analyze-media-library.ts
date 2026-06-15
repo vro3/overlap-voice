@@ -1,10 +1,17 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { rateLimit, checkOrigin } from './lib/guard.js';
+
+export const config = {
+  api: { bodyParser: { sizeLimit: '1mb' } },
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (!checkOrigin(req, res)) return;
+  if (!(await rateLimit(req, res, { key: 'analyze-media', limit: 15, windowSec: 60 }))) return;
 
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
