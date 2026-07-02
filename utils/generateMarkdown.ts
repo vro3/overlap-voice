@@ -5,7 +5,6 @@ export function generateMarkdown(
   sessions: Session[],
   answers: Record<string, string>,
   routerAnswer?: string,
-  includeAi?: boolean,
 ): string {
   const date = new Date().toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric'
@@ -32,14 +31,6 @@ export function generateMarkdown(
     answeredQuestions.forEach((question) => {
       md += `### ${question.text}\n`;
       md += `${answers[question.id]}\n\n`;
-
-      // Include AI analysis if enabled and available
-      if (includeAi) {
-        const response = session.responses.find(r => r.questionId === question.id);
-        if (response?.summary) {
-          md += `**AI Summary:** ${response.summary}\n\n`;
-        }
-      }
     });
 
     md += `---\n\n`;

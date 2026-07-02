@@ -42,7 +42,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate, onRes
           <div>
             <h3 className="text-[11px] font-semibold text-muted uppercase tracking-[0.15em] mb-3">Features</h3>
             <div className="space-y-1 divide-y divide-border-subtle">
-              <Toggle label="AI Analysis" description="Send answers to Gemini for summaries and insights" checked={settings.aiAnalysisEnabled} onChange={(v) => onUpdate('aiAnalysisEnabled', v)} />
               <Toggle label="Voice Input" description="Show microphone button for speech-to-text" checked={settings.voiceInputEnabled} onChange={(v) => onUpdate('voiceInputEnabled', v)} />
               <Toggle label="Magic Link Screen" description="Show email entry before questions" checked={settings.magicLinkEnabled} onChange={(v) => onUpdate('magicLinkEnabled', v)} />
               <Toggle label="Router Question" description="Show standalone first question" checked={settings.routerQuestionEnabled} onChange={(v) => onUpdate('routerQuestionEnabled', v)} />
@@ -56,7 +55,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate, onRes
             <div className="space-y-1 divide-y divide-border-subtle">
               <Toggle label="Tier Indicators" description="Show must-ask/should-ask/optional labels" checked={settings.showTierIndicators} onChange={(v) => onUpdate('showTierIndicators', v)} />
               <Toggle label="Progress Percentage" description="Show % instead of plain language" checked={settings.showProgressPercentage} onChange={(v) => onUpdate('showProgressPercentage', v)} />
-              <Toggle label="AI Insights in Sidebar" description="Show insights and quotables panel" checked={settings.showAiInsightsInSidebar} onChange={(v) => onUpdate('showAiInsightsInSidebar', v)} />
             </div>
           </div>
 

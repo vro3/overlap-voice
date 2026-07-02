@@ -7,15 +7,14 @@ interface OutputScreenProps {
   sessions: Session[];
   answers: Record<string, string>;
   routerAnswer: string;
-  aiEnabled: boolean;
   onStartOver: () => void;
 }
 
-const OutputScreen: React.FC<OutputScreenProps> = ({ email, sessions, answers, routerAnswer, aiEnabled, onStartOver }) => {
+const OutputScreen: React.FC<OutputScreenProps> = ({ email, sessions, answers, routerAnswer, onStartOver }) => {
   const answeredCount = Object.values(answers).filter((v: string) => v?.trim()).length + (routerAnswer ? 1 : 0);
 
   const handleDownload = () => {
-    const md = generateMarkdown(email, sessions, answers, routerAnswer, aiEnabled);
+    const md = generateMarkdown(email, sessions, answers, routerAnswer);
     downloadMarkdown(md, email);
   };
 

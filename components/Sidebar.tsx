@@ -228,33 +228,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* AI Insights — only when enabled */}
-          {settings.showAiInsightsInSidebar && settings.aiAnalysisEnabled && (
-            <div className="mx-3 mt-4">
-              <span className="text-[10px] font-semibold text-muted uppercase tracking-[0.12em] mb-2 block">
-                AI Insights
-              </span>
-              {sessions.flatMap(s => s.responses.filter(r => r.summary)).length > 0 ? (
-                <div className="space-y-2">
-                  {sessions.flatMap(s =>
-                    s.responses.filter(r => r.summary).map(r => ({
-                      sessionName: s.name,
-                      summary: r.summary,
-                    }))
-                  ).slice(-3).reverse().map((insight, i) => (
-                    <div key={i} className="bg-surface rounded-lg p-3 border border-border-subtle">
-                      <div className="text-[10px] text-accent mb-1">{insight.sessionName}</div>
-                      <p className="text-[11px] text-secondary line-clamp-2">{insight.summary}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[11px] text-muted text-center py-3">
-                  Complete questions with AI enabled to see insights
-                </p>
-              )}
-            </div>
-          )}
         </nav>
 
         {/* Footer */}

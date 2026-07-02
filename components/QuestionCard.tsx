@@ -1,25 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Question, InterviewResponse, AppSettings } from '../types';
+import React, { useRef, useEffect, useCallback } from 'react';
+import { Question, AppSettings } from '../types';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
-import { processAudioResponse, processTextResponse } from '../services/geminiService';
-
-// crypto.randomUUID is unavailable in non-secure contexts (plain http, some
-// embedded webviews). Fall back to a timestamp+random id so AI mode never throws.
-const newId = (): string => {
-  try {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID();
-    }
-  } catch { /* fall through */ }
-  return `resp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-};
 
 interface QuestionCardProps {
   question: Question;
   value: string;
   onChange: (questionId: string, value: string) => void;
-  existingResponse?: InterviewResponse;
-  onSaveAiResponse?: (response: InterviewResponse) => void;
   settings: AppSettings;
   isFirstInSection: boolean;
   sectionQuestionCount?: number;
@@ -30,8 +16,6 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   question,
   value,
   onChange,
-  existingResponse,
-  onSaveAiResponse,
   settings,
   isFirstInSection,
   sectionQuestionCount,
@@ -39,8 +23,6 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const speechBaseRef = useRef(''); // field value captured when the mic starts
-  const [aiStatus, setAiStatus] = useState<'idle' | 'processing' | 'done' | 'error'>('idle');
-  const [aiSummary, setAiSummary] = useState(existingResponse?.summary || '');
 
   // Speech recognition for simple mode
   const audioDeviceId = typeof window !== 'undefined' ? localStorage.getItem('selectedAudioDeviceId') || '' : '';
@@ -69,32 +51,6 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
   }, [value]);
-
-  // AI mode: process text through Gemini
-  const handleAiAnalyze = async () => {
-    if (!value.trim() || !settings.aiAnalysisEnabled) return;
-    setAiStatus('processing');
-    try {
-      const result = await processTextResponse(value);
-      setAiSummary(result.summary);
-      setAiStatus('done');
-      onSaveAiResponse?.({
-        id: existingResponse?.id || newId(),
-        questionId: question.id,
-        questionText: question.text,
-        timestamp: new Date().toISOString(),
-        transcription: value,
-        summary: result.summary,
-        keyInsight: result.keyInsight,
-        actionItems: result.actionItems,
-        quotable: result.quotable,
-        isEdited: true,
-      });
-    } catch (err) {
-      console.error('AI analysis failed:', err);
-      setAiStatus('error');
-    }
-  };
 
   // Tier colors (only shown when setting enabled)
   const getTierColor = (tier?: string) => {
@@ -220,76 +176,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                 )}
               </div>
             )}
-
-            {/* AI Analyze button — only when AI mode is on */}
-            {settings.aiAnalysisEnabled && value.trim() && question.inputType === 'textarea' && (
-              <div className="mt-3 flex justify-end">
-                <button
-                  onClick={handleAiAnalyze}
-                  disabled={aiStatus === 'processing'}
-                  className="text-[13px] text-accent hover:text-accent/80 font-medium px-3 py-1.5 rounded-lg hover:bg-accent/10 transition-all disabled:opacity-50"
-                >
-                  {aiStatus === 'processing' ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-3 h-3 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
-                      Analyzing...
-                    </span>
-                  ) : aiStatus === 'done' ? (
-                    'Re-analyze'
-                  ) : aiStatus === 'error' ? (
-                    'Try again'
-                  ) : (
-                    'Analyze with AI'
-                  )}
-                </button>
-              </div>
-            )}
-
-            {/* AI failure — tell the user rather than silently reverting */}
-            {settings.aiAnalysisEnabled && aiStatus === 'error' && (
-              <p className="mt-2 text-right text-[12px] text-danger">
-                Analysis didn't go through. Check your connection and try again.
-              </p>
-            )}
           </div>
-
-          {/* AI Analysis Results — only shown when AI is enabled and results exist */}
-          {settings.aiAnalysisEnabled && aiStatus === 'done' && aiSummary && (
-            <div className="mt-6 space-y-3">
-              <div className="bg-accent-soft/20 border border-accent/10 p-4 rounded-xl">
-                <div className="text-[10px] font-semibold text-accent uppercase tracking-[0.1em] mb-2">The Gist</div>
-                <p className="text-[14px] text-secondary leading-relaxed">{aiSummary}</p>
-              </div>
-
-              {existingResponse?.keyInsight && (
-                <div className="bg-info-soft/30 border border-info/10 p-4 rounded-xl">
-                  <div className="text-[10px] font-semibold text-info uppercase tracking-[0.1em] mb-2">What This Means</div>
-                  <p className="text-[14px] text-secondary leading-relaxed">{existingResponse.keyInsight}</p>
-                </div>
-              )}
-
-              {existingResponse?.actionItems && existingResponse.actionItems.length > 0 && (
-                <div className="bg-success-soft/30 border border-success/10 p-4 rounded-xl">
-                  <div className="text-[10px] font-semibold text-success uppercase tracking-[0.1em] mb-2">To Explore</div>
-                  <ul className="text-[14px] text-secondary space-y-1.5">
-                    {existingResponse.actionItems.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="text-success mt-0.5 text-xs">→</span>
-                        <span className="leading-relaxed">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {existingResponse?.quotable && (
-                <div className="bg-highlight-soft/30 border border-highlight/10 p-4 rounded-xl">
-                  <div className="text-[10px] font-semibold text-highlight uppercase tracking-[0.1em] mb-2">In Your Words</div>
-                  <p className="text-[14px] text-secondary italic leading-relaxed">"{existingResponse.quotable}"</p>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>

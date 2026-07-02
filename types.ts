@@ -38,19 +38,10 @@ export interface Session {
   responses: InterviewResponse[];
 }
 
-export interface GeminiResult {
-  transcription: string;
-  summary: string;
-  keyInsight?: string;
-  actionItems?: string[];
-  quotable?: string;
-}
-
-export type AppScreen = 'vision' | 'landing' | 'magic-link' | 'router' | 'questions' | 'review' | 'output' | 'search';
+export type AppScreen = 'vision' | 'landing' | 'magic-link' | 'router' | 'questions' | 'review' | 'output';
 
 export interface AppSettings {
   // Features
-  aiAnalysisEnabled: boolean;
   voiceInputEnabled: boolean;
   magicLinkEnabled: boolean;
   routerQuestionEnabled: boolean;
@@ -64,7 +55,6 @@ export interface AppSettings {
   // Display
   showTierIndicators: boolean;
   showProgressPercentage: boolean;
-  showAiInsightsInSidebar: boolean;
 
   // Question Filtering
   showAllQuestions: boolean;

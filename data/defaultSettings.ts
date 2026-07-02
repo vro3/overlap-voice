@@ -2,7 +2,6 @@ import { AppSettings } from '../types';
 
 export const DEFAULT_SETTINGS: AppSettings = {
     // Features — prototype defaults (spec-compliant)
-    aiAnalysisEnabled: false,
     voiceInputEnabled: true,
     magicLinkEnabled: true,
     routerQuestionEnabled: true,
@@ -16,7 +15,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     // Display
     showTierIndicators: false,
     showProgressPercentage: false,
-    showAiInsightsInSidebar: false,
 
     // Questions
     showAllQuestions: true,

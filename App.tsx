@@ -12,7 +12,6 @@ import ReviewScreen from './components/ReviewScreen';
 import OutputScreen from './components/OutputScreen';
 import SettingsPanel from './components/SettingsPanel';
 import AudioSettingsModal from './components/AudioSettingsModal';
-import { KnowledgeSearch } from './components/KnowledgeSearch';
 import { DemoTour, DemoStep } from './components/DemoTour';
 import { DEMO_ANSWERS, DEMO_ROUTER_ANSWER, DEMO_EMAIL } from './data/demoData';
 
@@ -64,11 +63,6 @@ const DEMO_STEPS: DemoStepConfig[] = [
     screen: 'output', anchor: 'overlap-output',
     title: 'One clean knowledge file',
     body: 'The Overlap turns every answer into a single Markdown file — a knowledge base any AI can read to understand you and sound like you.',
-  },
-  {
-    screen: 'search', anchor: 'overlap-search',
-    title: 'Then ask it anything',
-    body: 'Search your own knowledge base in plain language and get answers grounded in what you actually said — with the sources behind them.',
   },
   {
     screen: 'output',
@@ -313,9 +307,9 @@ const App: React.FC = () => {
   }, [settings.reviewScreenEnabled]);
 
   const handleExport = useCallback(() => {
-    const md = generateMarkdown(email, sessions, answers, routerAnswer, settings.aiAnalysisEnabled);
+    const md = generateMarkdown(email, sessions, answers, routerAnswer);
     downloadMarkdown(md, email || 'user');
-  }, [email, sessions, answers, routerAnswer, settings.aiAnalysisEnabled]);
+  }, [email, sessions, answers, routerAnswer]);
 
   const handleDownloadProgress = useCallback(() => {
     const progress = {
@@ -552,39 +546,13 @@ const App: React.FC = () => {
       )}
 
       {currentScreen === 'output' && (
-        <>
-          <OutputScreen
-            email={effectiveEmail || 'user'}
-            sessions={sessions}
-            answers={effectiveAnswers}
-            routerAnswer={effectiveRouter}
-            aiEnabled={settings.aiAnalysisEnabled}
-            onStartOver={demoMode ? noop : handleStartOver}
-          />
-          <div className="text-center pb-8">
-            <button
-              onClick={() => setCurrentScreen('search')}
-              className="bg-transparent border border-border-subtle text-muted hover:text-primary hover:border-border text-[13px] px-5 py-2 rounded-lg transition-colors"
-            >
-              Search knowledge base
-            </button>
-          </div>
-        </>
-      )}
-
-      {currentScreen === 'search' && (
-        <div className="min-h-screen bg-background text-primary">
-          <div className="px-6 py-4 border-b border-border-subtle flex items-center gap-3">
-            <button
-              onClick={() => setCurrentScreen('output')}
-              className="bg-transparent border-0 text-muted hover:text-primary text-sm transition-colors cursor-pointer"
-            >
-              ← Back
-            </button>
-            <span className="text-muted text-sm">Knowledge Base Search</span>
-          </div>
-          <KnowledgeSearch />
-        </div>
+        <OutputScreen
+          email={effectiveEmail || 'user'}
+          sessions={sessions}
+          answers={effectiveAnswers}
+          routerAnswer={effectiveRouter}
+          onStartOver={demoMode ? noop : handleStartOver}
+        />
       )}
     </>
   );
