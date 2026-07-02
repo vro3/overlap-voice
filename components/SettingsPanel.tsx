@@ -62,18 +62,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onUpdate, onRes
           <div>
             <h3 className="text-[11px] font-semibold text-muted uppercase tracking-[0.15em] mb-3">Storage</h3>
             <div className="space-y-1 divide-y divide-border-subtle">
-              <Toggle label="Auto-Save" description="Automatically save progress" checked={settings.autoSaveEnabled} onChange={(v) => onUpdate('autoSaveEnabled', v)} />
-              <div className="py-3">
-                <div className="text-[14px] text-primary font-medium mb-2">Storage Mode</div>
-                <select
-                  value={settings.storageMode}
-                  onChange={(e) => onUpdate('storageMode', e.target.value as 'localStorage' | 'googleSheets')}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-primary text-[14px] focus:border-accent outline-none"
-                >
-                  <option value="localStorage">Local Storage (no account needed)</option>
-                  <option value="googleSheets">Google Sheets (cloud sync)</option>
-                </select>
-              </div>
+              <Toggle label="Auto-Save" description="Automatically save answers on this device" checked={settings.autoSaveEnabled} onChange={(v) => onUpdate('autoSaveEnabled', v)} />
               <div className="py-3">
                 <div className="text-[14px] text-primary font-medium mb-2">Auto-Save Delay</div>
                 <select

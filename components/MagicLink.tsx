@@ -71,7 +71,8 @@ const MagicLink: React.FC<MagicLinkProps> = ({ onComplete, onSkip, settings, ini
               What's your email address?
             </label>
             <p className="text-muted text-[14px] mb-4">
-              So we can save your progress and you can come back anytime.
+              We'll label your answers with it. Your answers save automatically in this
+              browser as you go — come back on the same device to pick up where you left off.
             </p>
             <input
               type="email"
@@ -153,7 +154,7 @@ const MagicLink: React.FC<MagicLinkProps> = ({ onComplete, onSkip, settings, ini
           </div>
         </form>
 
-        <p className="text-muted text-sm text-center mt-6">No account needed. Just your email so we can save your answers.</p>
+        <p className="text-muted text-sm text-center mt-6">No account needed. Your answers save right here in this browser as you go.</p>
 
         {onWatchDemo && (
           <div className="mt-8 pt-6 border-t border-border-subtle text-center">

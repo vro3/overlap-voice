@@ -42,6 +42,11 @@ const OutputScreen: React.FC<OutputScreenProps> = ({ email, sessions, answers, r
           Download as Markdown
         </button>
 
+        <p className="text-muted text-[13px] max-w-md mx-auto -mt-2 mb-2">
+          Your answers are saved in this browser on this device. Downloading a copy keeps them
+          somewhere safe you can't lose — worth doing before you close the tab.
+        </p>
+
         <div className="bg-surface rounded-2xl border border-border-subtle p-8 mt-8 text-left">
           <h3 className="text-[11px] font-semibold text-muted uppercase tracking-[0.15em] mb-4">Coming Soon</h3>
           <div className="space-y-3">

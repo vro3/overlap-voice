@@ -8,7 +8,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     reviewScreenEnabled: true,
 
     // Persistence
-    storageMode: 'googleSheets',
     autoSaveEnabled: true,
     autoSaveDebounceMs: 3000,
 

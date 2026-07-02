@@ -80,7 +80,7 @@ const modeFromStepId = (stepId?: string): ExtractionMode =>
 
 const App: React.FC = () => {
   const { settings, updateSetting, resetSettings } = useSettings();
-  const { saveProgress, loadProgress, loadProgressFromServer, clearProgress, showSavedToast } = useAutoSave(settings);
+  const { saveProgress, loadProgress, clearProgress, flush, saveStatus } = useAutoSave(settings);
 
   // Screen state
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('magic-link');
@@ -102,13 +102,9 @@ const App: React.FC = () => {
   const [demoMode, setDemoMode] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
 
-  // Auto-save is gated until the initial restore (mount + server load) has
-  // settled. Without this, an empty starting state can auto-save over a
-  // returning user's cloud answers before their real data has loaded.
+  // Auto-save is gated until the initial restore from localStorage has run, so
+  // the empty starting state can't overwrite saved answers before they load.
   const [hydrated, setHydrated] = useState(false);
-  // Set when a returning user's server restore fails/times out, so we can
-  // offer a retry instead of silently starting them from scratch.
-  const [loadError, setLoadError] = useState(false);
 
   const handleModeChange = useCallback((mode: ExtractionMode) => {
     setExtractionMode(mode);
@@ -157,7 +153,6 @@ const App: React.FC = () => {
       extractionMode,
       routerAnswer,
       answers,
-      aiResponses: {},
       lastSaved: new Date().toISOString(),
     });
   }, [hydrated, answers, routerAnswer, activeSessionId, currentScreen, email, extractionMode, demoMode]);
@@ -174,78 +169,14 @@ const App: React.FC = () => {
 
   // --- Navigation Helpers ---
 
-  // Pull this email's saved answers from the server, bounded by a timeout so a
-  // slow Sheets read never blocks the UI. Returns true if cloud data was
-  // applied. Throws on timeout/failure so callers can offer a retry.
-  const restoreFromServer = useCallback(async (userEmail: string, userRouterAnswer: string): Promise<boolean> => {
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), 2000)
-    );
-    const serverData = await Promise.race([
-      loadProgressFromServer(userEmail),
-      timeoutPromise,
-    ]);
-
-    if (serverData) {
-      setAnswers(serverData.answers || {});
-      if (!userRouterAnswer && serverData.routerAnswer) {
-        setRouterAnswer(serverData.routerAnswer);
-      }
-      setActiveSessionId(serverData.currentStep || 'step-1');
-      setExtractionMode(serverData.extractionMode || modeFromStepId(serverData.currentStep));
-      if (serverData.currentScreen && serverData.currentScreen !== 'landing' && serverData.currentScreen !== 'magic-link' && serverData.currentScreen !== 'router') {
-        setCurrentScreen(serverData.currentScreen);
-      } else {
-        setCurrentScreen('questions');
-      }
-      return true;
-    }
-    return false;
-  }, [loadProgressFromServer]);
-
-  const handleMagicLinkComplete = useCallback(async (userEmail: string, userRouterAnswer: string) => {
+  const handleMagicLinkComplete = useCallback((userEmail: string, userRouterAnswer: string) => {
+    // Any saved answers were already restored from localStorage on mount; the
+    // email is just an identity label for the exported file. Straight to the
+    // interview — saving is on-device and automatic from here.
     setEmail(userEmail);
     if (userRouterAnswer) setRouterAnswer(userRouterAnswer);
-    setLoadError(false);
-
-    if (settings.storageMode === 'googleSheets') {
-      try {
-        // Hold off auto-save until the restore attempt settles, so a slow load
-        // can't be clobbered by an empty-state save.
-        setHydrated(false);
-        const applied = await restoreFromServer(userEmail, userRouterAnswer);
-        setHydrated(true);
-        if (applied) return;
-      } catch (e) {
-        // Couldn't reach the cloud copy. Surface a retry rather than silently
-        // starting fresh, and keep auto-save OFF so we don't overwrite the
-        // (possibly newer) cloud row with the empty local state.
-        setLoadError(true);
-        setCurrentScreen('questions');
-        return;
-      }
-    }
-
     setHydrated(true);
     setCurrentScreen('questions');
-  }, [settings.storageMode, restoreFromServer]);
-
-  const handleRetryLoad = useCallback(async () => {
-    if (!email) return;
-    setLoadError(false);
-    try {
-      setHydrated(false);
-      await restoreFromServer(email, routerAnswer);
-      setHydrated(true);
-    } catch (e) {
-      setLoadError(true);
-    }
-  }, [email, routerAnswer, restoreFromServer]);
-
-  const handleDismissLoadError = useCallback(() => {
-    // User chose to continue with local data — safe to enable saving now.
-    setLoadError(false);
-    setHydrated(true);
   }, []);
 
   const handleSkipLogin = useCallback(() => {
@@ -291,8 +222,9 @@ const App: React.FC = () => {
   }, []);
 
   const handleGenerate = useCallback(() => {
+    flush(); // make sure everything is written before the finish screen
     setCurrentScreen('output');
-  }, []);
+  }, [flush]);
 
   const handleBackToQuestions = useCallback(() => {
     setCurrentScreen('questions');
@@ -340,7 +272,6 @@ const App: React.FC = () => {
     setEmail('');
     setExtractionMode('business');
     setActiveSessionId('step-1');
-    setLoadError(false);
     setHydrated(false);
     setCurrentScreen('magic-link');
     clearProgress();
@@ -354,7 +285,6 @@ const App: React.FC = () => {
     setEmail('');
     setExtractionMode('business');
     setActiveSessionId('step-1');
-    setLoadError(false);
     setHydrated(false);
     clearProgress();
     setCurrentScreen('magic-link');
@@ -451,31 +381,23 @@ const App: React.FC = () => {
         onClose={() => setShowAudioSettings(false)}
       />
 
-      {/* Save toast */}
-      {showSavedToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-surface border border-border-subtle px-4 py-2.5 rounded-xl shadow-soft text-[13px] text-success animate-fadeIn">
-          Progress saved
-        </div>
-      )}
-
-      {/* Cloud-restore failure — offer a retry instead of silently starting fresh */}
-      {loadError && !demoMode && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)] bg-surface border border-danger/30 rounded-xl shadow-soft px-4 py-3 flex items-center gap-3 animate-fadeIn">
-          <span className="flex-1 text-[13px] text-secondary leading-snug">
-            We couldn't reach your saved answers. Your work here isn't being synced yet.
-          </span>
-          <button
-            onClick={handleRetryLoad}
-            className="flex-shrink-0 text-[12px] font-medium text-accent hover:text-accent/80 px-2 py-1 rounded-lg hover:bg-accent/10 transition-colors"
-          >
-            Retry
-          </button>
-          <button
-            onClick={handleDismissLoadError}
-            className="flex-shrink-0 text-[12px] font-medium text-muted hover:text-primary px-2 py-1 rounded-lg hover:bg-surface-hover transition-colors"
-          >
-            Continue
-          </button>
+      {/* Persistent save-status indicator — always visible during the interview
+          so the user can trust their answers are being saved on this device. */}
+      {!demoMode && (currentScreen === 'questions' || currentScreen === 'review') && (
+        <div className="fixed bottom-6 right-6 z-50 bg-surface border border-border-subtle px-3.5 py-2 rounded-xl shadow-soft text-[12px] flex items-center gap-2">
+          {saveStatus === 'saving' ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-muted animate-pulse" />
+              <span className="text-muted">Saving…</span>
+            </>
+          ) : (
+            <>
+              <svg className="w-3.5 h-3.5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-secondary">Saved on this device</span>
+            </>
+          )}
         </div>
       )}
 

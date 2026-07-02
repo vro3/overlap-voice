@@ -1,120 +1,85 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { SavedProgress, AppSettings } from '../types';
 
 const PROGRESS_STORAGE_KEY = 'overlap_progress';
 
-// Per-email ownership token (minted server-side on first save). Kept in
-// localStorage so this device keeps write access to its own cloud data.
-const OWNER_TOKEN_PREFIX = 'overlap_owner_token:';
-const tokenKey = (email: string) => OWNER_TOKEN_PREFIX + email.toLowerCase().trim();
+export type SaveStatus = 'idle' | 'saving' | 'saved';
 
-function getOwnerToken(email: string): string | null {
-  try {
-    return localStorage.getItem(tokenKey(email));
-  } catch {
-    return null;
-  }
-}
-
-function setOwnerToken(email: string, token: string): void {
-  try {
-    localStorage.setItem(tokenKey(email), token);
-  } catch {
-    /* localStorage unavailable — cloud save will still work this session */
-  }
-}
-
+// On-device persistence only. Answers are written to this browser's
+// localStorage (debounced) and restored on reload. There is no cloud sync —
+// so "saved" always reflects a real, completed write the user can trust.
 export function useAutoSave(settings: AppSettings) {
-  const [showSavedToast, setShowSavedToast] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const saveTimeoutRef = useRef<number | null>(null);
   const lastSavedRef = useRef<string>('');
+  const pendingRef = useRef<string | null>(null); // serialized data waiting to be written
+
+  const writeNow = useCallback(() => {
+    if (pendingRef.current === null) return;
+    const serialized = pendingRef.current;
+    try {
+      localStorage.setItem(PROGRESS_STORAGE_KEY, serialized);
+      lastSavedRef.current = serialized;
+      pendingRef.current = null;
+      setSaveStatus('saved');
+    } catch (e) {
+      // Storage full or blocked (e.g. private mode). Keep the pending data so a
+      // later flush can retry, and surface that we're not saved.
+      console.error('Failed to save progress:', e);
+      setSaveStatus('idle');
+    }
+  }, []);
 
   const saveProgress = useCallback((data: SavedProgress) => {
     if (!settings.autoSaveEnabled) return;
-
     const serialized = JSON.stringify(data);
-    if (serialized === lastSavedRef.current) return;
+    if (serialized === lastSavedRef.current) return; // nothing changed
+    pendingRef.current = serialized;
+    setSaveStatus('saving');
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = window.setTimeout(writeNow, settings.autoSaveDebounceMs);
+  }, [settings.autoSaveEnabled, settings.autoSaveDebounceMs, writeNow]);
 
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
+  // Write any pending edits immediately — used when the tab is hidden/closed so
+  // the last few seconds of typing (still inside the debounce window) can't be lost.
+  const flush = useCallback(() => {
+    if (saveTimeoutRef.current) { clearTimeout(saveTimeoutRef.current); saveTimeoutRef.current = null; }
+    writeNow();
+  }, [writeNow]);
 
-    saveTimeoutRef.current = window.setTimeout(() => {
-      try {
-        // Primary: Always save to localStorage (instant, synchronous)
-        localStorage.setItem(PROGRESS_STORAGE_KEY, serialized);
-        lastSavedRef.current = serialized;
-        setShowSavedToast(true);
-        setTimeout(() => setShowSavedToast(false), 2000);
-
-        // Secondary: Attempt server save (fire-and-forget, non-blocking)
-        // Wrapped in setTimeout to prevent blocking the UI
-        if (settings.storageMode === 'googleSheets' && data.email) {
-          const email = data.email; // narrowed to string by the guard above
-          setTimeout(() => {
-            fetch('/api/user/save', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                email,
-                progress: data,
-                token: getOwnerToken(email) || undefined,
-              }),
-            })
-              .then((res) => (res.ok ? res.json() : null))
-              .then((json) => {
-                // First save for this email returns a token — persist it so this
-                // device keeps write access. (A 403/denied response has no token.)
-                if (json?.token) setOwnerToken(email, json.token);
-              })
-              .catch(() => {
-                // Silently fail — localStorage is already saved
-              });
-          }, 0);
-        }
-      } catch (e) {
-        console.error('Failed to save progress:', e);
-      }
-    }, settings.autoSaveDebounceMs);
-
+  useEffect(() => {
+    const onPageHide = () => flush();
+    // On mobile, 'visibilitychange' -> hidden is the reliable "app is going
+    // away" signal (pagehide/beforeunload often don't fire); pagehide covers
+    // desktop tab-close and navigation.
+    const onVisibility = () => { if (document.visibilityState === 'hidden') flush(); };
+    window.addEventListener('pagehide', onPageHide);
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      window.removeEventListener('pagehide', onPageHide);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [settings.autoSaveEnabled, settings.autoSaveDebounceMs, settings.storageMode]);
+  }, [flush]);
 
   const loadProgress = useCallback((): SavedProgress | null => {
     try {
       const saved = localStorage.getItem(PROGRESS_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        lastSavedRef.current = saved; // don't immediately re-save identical data
+        return JSON.parse(saved);
+      }
     } catch (e) {
       console.error('Failed to load progress:', e);
     }
     return null;
   }, []);
 
-  // Resolves to the saved progress, or null when the server confirms there is
-  // no saved data for this email. THROWS on a transport/HTTP/parse failure so
-  // callers can tell "nothing saved" apart from "couldn't reach the server"
-  // (the latter should offer a retry, not silently start the user over).
-  const loadProgressFromServer = useCallback(async (email: string): Promise<SavedProgress | null> => {
-    const res = await fetch('/api/user/load', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, token: getOwnerToken(email) || undefined }),
-    });
-    if (!res.ok) throw new Error(`load failed: ${res.status}`);
-    const json = await res.json();
-    if (json.token) setOwnerToken(email, json.token); // defensive; load won't normally mint
-    if (json.exists && json.data) {
-      return json.data as SavedProgress;
-    }
-    return null; // server reached, no saved data for this email
-  }, []);
-
   const clearProgress = useCallback(() => {
     localStorage.removeItem(PROGRESS_STORAGE_KEY);
     lastSavedRef.current = '';
+    pendingRef.current = null;
+    setSaveStatus('idle');
   }, []);
 
-  return { saveProgress, loadProgress, loadProgressFromServer, clearProgress, showSavedToast };
+  return { saveProgress, loadProgress, clearProgress, flush, saveStatus };
 }

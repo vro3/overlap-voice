@@ -48,7 +48,6 @@ export interface AppSettings {
   reviewScreenEnabled: boolean;
 
   // Persistence
-  storageMode: 'localStorage' | 'googleSheets';
   autoSaveEnabled: boolean;
   autoSaveDebounceMs: number;
 
@@ -68,6 +67,5 @@ export interface SavedProgress {
   extractionMode?: ExtractionMode;
   routerAnswer: string;
   answers: Record<string, string>;
-  aiResponses: Record<string, Omit<InterviewResponse, 'id' | 'questionId' | 'questionText' | 'timestamp' | 'transcription'>>;
   lastSaved: string;
 }
