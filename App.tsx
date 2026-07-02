@@ -78,6 +78,12 @@ const DEMO_STEPS: DemoStepConfig[] = [
   },
 ];
 
+// Business step ids are 'step-N'; personal ids are 'p-step-N'. Lets us recover
+// the mode from a saved position even when the source (e.g. the Sheets row)
+// doesn't carry an explicit extractionMode field.
+const modeFromStepId = (stepId?: string): ExtractionMode =>
+  stepId?.startsWith('p-') ? 'personal' : 'business';
+
 const App: React.FC = () => {
   const { settings, updateSetting, resetSettings } = useSettings();
   const { saveProgress, loadProgress, loadProgressFromServer, clearProgress, showSavedToast } = useAutoSave(settings);
@@ -101,6 +107,14 @@ const App: React.FC = () => {
   // Demo walkthrough (guided spotlight tour over seeded example answers).
   const [demoMode, setDemoMode] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
+
+  // Auto-save is gated until the initial restore (mount + server load) has
+  // settled. Without this, an empty starting state can auto-save over a
+  // returning user's cloud answers before their real data has loaded.
+  const [hydrated, setHydrated] = useState(false);
+  // Set when a returning user's server restore fails/times out, so we can
+  // offer a retry instead of silently starting them from scratch.
+  const [loadError, setLoadError] = useState(false);
 
   const handleModeChange = useCallback((mode: ExtractionMode) => {
     setExtractionMode(mode);
@@ -127,6 +141,7 @@ const App: React.FC = () => {
       setAnswers(saved.answers || {});
       setRouterAnswer(saved.routerAnswer || '');
       setActiveSessionId(saved.currentStep || 'step-1');
+      setExtractionMode(saved.extractionMode || modeFromStepId(saved.currentStep));
       // Resume where they left off (but skip vision/landing/router — go to welcome)
       if (saved.currentScreen && saved.currentScreen !== 'landing' && saved.currentScreen !== 'router' && saved.currentScreen !== 'vision') {
         setCurrentScreen(saved.currentScreen);
@@ -134,21 +149,24 @@ const App: React.FC = () => {
         setCurrentScreen('magic-link');
       }
     }
+    setHydrated(true);
   }, []);
 
-  // Auto-save on changes (never while the demo is driving the screens)
+  // Auto-save on changes (never while the demo is driving the screens, and not
+  // until the initial restore has settled — see the `hydrated` guard).
   useEffect(() => {
-    if (currentScreen === 'magic-link' || demoMode) return;
+    if (!hydrated || currentScreen === 'magic-link' || demoMode) return;
     saveProgress({
       email,
       currentStep: activeSessionId,
       currentScreen,
+      extractionMode,
       routerAnswer,
       answers,
       aiResponses: {},
       lastSaved: new Date().toISOString(),
     });
-  }, [answers, routerAnswer, activeSessionId, currentScreen, email, demoMode]);
+  }, [hydrated, answers, routerAnswer, activeSessionId, currentScreen, email, extractionMode, demoMode]);
 
   // Demo walkthrough: each step drives the app to the right screen/mode.
   useEffect(() => {
@@ -162,42 +180,83 @@ const App: React.FC = () => {
 
   // --- Navigation Helpers ---
 
+  // Pull this email's saved answers from the server, bounded by a timeout so a
+  // slow Sheets read never blocks the UI. Returns true if cloud data was
+  // applied. Throws on timeout/failure so callers can offer a retry.
+  const restoreFromServer = useCallback(async (userEmail: string, userRouterAnswer: string): Promise<boolean> => {
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 2000)
+    );
+    const serverData = await Promise.race([
+      loadProgressFromServer(userEmail),
+      timeoutPromise,
+    ]);
+
+    if (serverData) {
+      setAnswers(serverData.answers || {});
+      if (!userRouterAnswer && serverData.routerAnswer) {
+        setRouterAnswer(serverData.routerAnswer);
+      }
+      setActiveSessionId(serverData.currentStep || 'step-1');
+      setExtractionMode(serverData.extractionMode || modeFromStepId(serverData.currentStep));
+      if (serverData.currentScreen && serverData.currentScreen !== 'landing' && serverData.currentScreen !== 'magic-link' && serverData.currentScreen !== 'router') {
+        setCurrentScreen(serverData.currentScreen);
+      } else {
+        setCurrentScreen('questions');
+      }
+      return true;
+    }
+    return false;
+  }, [loadProgressFromServer]);
+
   const handleMagicLinkComplete = useCallback(async (userEmail: string, userRouterAnswer: string) => {
     setEmail(userEmail);
     if (userRouterAnswer) setRouterAnswer(userRouterAnswer);
+    setLoadError(false);
 
-    // Try to restore from server (with timeout to prevent blocking)
     if (settings.storageMode === 'googleSheets') {
       try {
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 2000)
-        );
-        const serverData = await Promise.race([
-          loadProgressFromServer(userEmail),
-          timeoutPromise
-        ]) as any;
-
-        if (serverData) {
-          setAnswers(serverData.answers || {});
-          if (!userRouterAnswer && serverData.routerAnswer) {
-            setRouterAnswer(serverData.routerAnswer);
-          }
-          setActiveSessionId(serverData.currentStep || 'step-1');
-          if (serverData.currentScreen && serverData.currentScreen !== 'landing' && serverData.currentScreen !== 'magic-link' && serverData.currentScreen !== 'router') {
-            setCurrentScreen(serverData.currentScreen);
-            return;
-          }
-        }
+        // Hold off auto-save until the restore attempt settles, so a slow load
+        // can't be clobbered by an empty-state save.
+        setHydrated(false);
+        const applied = await restoreFromServer(userEmail, userRouterAnswer);
+        setHydrated(true);
+        if (applied) return;
       } catch (e) {
-        // Silently fail and proceed with localStorage data
+        // Couldn't reach the cloud copy. Surface a retry rather than silently
+        // starting fresh, and keep auto-save OFF so we don't overwrite the
+        // (possibly newer) cloud row with the empty local state.
+        setLoadError(true);
+        setCurrentScreen('questions');
+        return;
       }
     }
 
+    setHydrated(true);
     setCurrentScreen('questions');
-  }, [settings.storageMode, loadProgressFromServer]);
+  }, [settings.storageMode, restoreFromServer]);
+
+  const handleRetryLoad = useCallback(async () => {
+    if (!email) return;
+    setLoadError(false);
+    try {
+      setHydrated(false);
+      await restoreFromServer(email, routerAnswer);
+      setHydrated(true);
+    } catch (e) {
+      setLoadError(true);
+    }
+  }, [email, routerAnswer, restoreFromServer]);
+
+  const handleDismissLoadError = useCallback(() => {
+    // User chose to continue with local data — safe to enable saving now.
+    setLoadError(false);
+    setHydrated(true);
+  }, []);
 
   const handleSkipLogin = useCallback(() => {
     setEmail('skip@skip.com');
+    setHydrated(true);
     setCurrentScreen('questions');
   }, []);
 
@@ -265,6 +324,7 @@ const App: React.FC = () => {
       answers,
       currentStep: activeSessionId,
       currentScreen,
+      extractionMode,
       lastSaved: new Date().toISOString(),
     };
 
@@ -278,7 +338,7 @@ const App: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [email, routerAnswer, answers, activeSessionId, currentScreen]);
+  }, [email, routerAnswer, answers, activeSessionId, currentScreen, extractionMode]);
 
   const handleStartOver = useCallback(() => {
     setAnswers({});
@@ -286,14 +346,25 @@ const App: React.FC = () => {
     setEmail('');
     setExtractionMode('business');
     setActiveSessionId('step-1');
+    setLoadError(false);
+    setHydrated(false);
     setCurrentScreen('magic-link');
     clearProgress();
   }, [clearProgress]);
 
   const handleLogout = useCallback(() => {
+    // Full reset — clear every trace of this user so the next person on a
+    // shared machine can't inherit (and auto-save) the previous user's answers.
+    setAnswers({});
+    setRouterAnswer('');
     setEmail('');
+    setExtractionMode('business');
+    setActiveSessionId('step-1');
+    setLoadError(false);
+    setHydrated(false);
+    clearProgress();
     setCurrentScreen('magic-link');
-  }, []);
+  }, [clearProgress]);
 
   // --- Demo handlers ---
   const startDemo = useCallback(() => {
@@ -319,21 +390,31 @@ const App: React.FC = () => {
   }, [clearProgress]);
 
   const handleUploadProgress = useCallback((progress: any) => {
-    try {
-      if (progress.email) setEmail(progress.email);
-      if (progress.routerAnswer) setRouterAnswer(progress.routerAnswer);
-      if (progress.answers) setAnswers(progress.answers);
-      if (progress.currentStep) setActiveSessionId(progress.currentStep);
-      if (progress.currentScreen && progress.currentScreen !== 'landing') {
-        setCurrentScreen(progress.currentScreen);
-      } else {
-        setCurrentScreen('questions');
-      }
-      alert('Progress restored successfully!');
-    } catch (error) {
-      console.error('Failed to restore progress:', error);
-      alert('Failed to restore progress. Please check the file format.');
+    // Validate shape before claiming success — a file that merely parses as
+    // JSON (e.g. `[]` or `{}`) must not report "restored" while restoring nothing.
+    if (
+      !progress ||
+      typeof progress !== 'object' ||
+      Array.isArray(progress) ||
+      typeof progress.answers !== 'object' ||
+      progress.answers === null
+    ) {
+      alert('That file doesn\'t look like an Overlap progress backup. Please choose a file you downloaded with the Progress button.');
+      return;
     }
+
+    if (progress.email) setEmail(progress.email);
+    if (progress.routerAnswer) setRouterAnswer(progress.routerAnswer);
+    setAnswers(progress.answers);
+    if (progress.currentStep) setActiveSessionId(progress.currentStep);
+    setExtractionMode(progress.extractionMode || modeFromStepId(progress.currentStep));
+    if (progress.currentScreen && progress.currentScreen !== 'landing') {
+      setCurrentScreen(progress.currentScreen);
+    } else {
+      setCurrentScreen('questions');
+    }
+    setHydrated(true);
+    alert('Progress restored successfully!');
   }, []);
 
   // --- Render ---
@@ -380,6 +461,27 @@ const App: React.FC = () => {
       {showSavedToast && (
         <div className="fixed bottom-6 right-6 z-50 bg-surface border border-border-subtle px-4 py-2.5 rounded-xl shadow-soft text-[13px] text-success animate-fadeIn">
           Progress saved
+        </div>
+      )}
+
+      {/* Cloud-restore failure — offer a retry instead of silently starting fresh */}
+      {loadError && !demoMode && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)] bg-surface border border-danger/30 rounded-xl shadow-soft px-4 py-3 flex items-center gap-3 animate-fadeIn">
+          <span className="flex-1 text-[13px] text-secondary leading-snug">
+            We couldn't reach your saved answers. Your work here isn't being synced yet.
+          </span>
+          <button
+            onClick={handleRetryLoad}
+            className="flex-shrink-0 text-[12px] font-medium text-accent hover:text-accent/80 px-2 py-1 rounded-lg hover:bg-accent/10 transition-colors"
+          >
+            Retry
+          </button>
+          <button
+            onClick={handleDismissLoadError}
+            className="flex-shrink-0 text-[12px] font-medium text-muted hover:text-primary px-2 py-1 rounded-lg hover:bg-surface-hover transition-colors"
+          >
+            Continue
+          </button>
         </div>
       )}
 
@@ -459,10 +561,10 @@ const App: React.FC = () => {
             aiEnabled={settings.aiAnalysisEnabled}
             onStartOver={demoMode ? noop : handleStartOver}
           />
-          <div style={{ textAlign: 'center', paddingBottom: 32 }}>
+          <div className="text-center pb-8">
             <button
               onClick={() => setCurrentScreen('search')}
-              style={{ background: 'none', border: '1px solid #333', color: '#888', cursor: 'pointer', fontSize: 13, padding: '8px 20px', borderRadius: 8 }}
+              className="bg-transparent border border-border-subtle text-muted hover:text-primary hover:border-border text-[13px] px-5 py-2 rounded-lg transition-colors"
             >
               Search knowledge base
             </button>
@@ -472,14 +574,14 @@ const App: React.FC = () => {
 
       {currentScreen === 'search' && (
         <div className="min-h-screen bg-background text-primary">
-          <div style={{ padding: '16px 24px', borderBottom: '1px solid #1f1f1f', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="px-6 py-4 border-b border-border-subtle flex items-center gap-3">
             <button
               onClick={() => setCurrentScreen('output')}
-              style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: 14 }}
+              className="bg-transparent border-0 text-muted hover:text-primary text-sm transition-colors cursor-pointer"
             >
               ← Back
             </button>
-            <span style={{ color: '#555', fontSize: 14 }}>Knowledge Base Search</span>
+            <span className="text-muted text-sm">Knowledge Base Search</span>
           </div>
           <KnowledgeSearch />
         </div>

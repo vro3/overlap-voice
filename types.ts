@@ -75,6 +75,7 @@ export interface SavedProgress {
   email: string;
   currentStep: string;
   currentScreen: AppScreen;
+  extractionMode?: ExtractionMode;
   routerAnswer: string;
   answers: Record<string, string>;
   aiResponses: Record<string, Omit<InterviewResponse, 'id' | 'questionId' | 'questionText' | 'timestamp' | 'transcription'>>;

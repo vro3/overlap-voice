@@ -1,4 +1,4 @@
-// KnowledgeSearch.tsx — v1.0.0 — 2026-02-14
+// KnowledgeSearch.tsx — v1.1.0 — 2026-06-12
 // Search interface for Overlap client knowledge bases
 
 import { useState } from 'react';
@@ -45,65 +45,51 @@ export function KnowledgeSearch() {
   };
 
   return (
-    <div style={{ maxWidth: 700, margin: '0 auto', padding: 24 }}>
-      <h2 style={{ marginBottom: 16, fontSize: 20, fontWeight: 600 }}>Knowledge Base Search</h2>
+    <div className="max-w-[700px] mx-auto p-6">
+      <h2 className="text-xl font-semibold text-primary mb-4">Knowledge Base Search</h2>
 
-      <div data-tour="overlap-search" style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+      <div data-tour="overlap-search" className="flex gap-2 mb-6">
         <input
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSearch()}
           placeholder="Ask a question about your knowledge base..."
-          style={{
-            flex: 1, padding: '10px 14px', borderRadius: 8,
-            border: '1px solid #333', background: '#1a1a1a', color: '#fff',
-            fontSize: 14,
-          }}
+          className="flex-1 px-3.5 py-2.5 rounded-lg border border-border-subtle bg-surface text-primary placeholder-muted/60 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
         />
         <button
           onClick={handleSearch}
           disabled={loading || !query.trim()}
-          style={{
-            padding: '10px 20px', borderRadius: 8, border: 'none',
-            background: loading ? '#444' : '#2563eb', color: '#fff',
-            cursor: loading ? 'wait' : 'pointer', fontSize: 14, fontWeight: 500,
-          }}
+          className="px-5 py-2.5 rounded-lg bg-accent text-background text-sm font-medium hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? 'Searching...' : 'Search'}
         </button>
       </div>
 
       {error && (
-        <div style={{ padding: 12, background: '#3b1010', borderRadius: 8, color: '#f87171', marginBottom: 16 }}>
+        <div className="mb-4 p-4 rounded-xl bg-danger/10 border border-danger/20 text-danger text-sm">
           {error}
         </div>
       )}
 
       {result && (
         <div>
-          <div style={{
-            padding: 16, background: '#111', borderRadius: 8, marginBottom: 16,
-            border: '1px solid #333', lineHeight: 1.6,
-          }}>
-            <div style={{ whiteSpace: 'pre-wrap', color: '#e5e5e5' }}>{result.answer}</div>
+          <div className="p-4 mb-4 rounded-xl bg-surface border border-border-subtle leading-relaxed">
+            <div className="whitespace-pre-wrap text-primary">{result.answer}</div>
           </div>
 
           {result.sources.length > 0 && (
             <div>
-              <h3 style={{ fontSize: 14, color: '#888', marginBottom: 8 }}>Sources</h3>
+              <h3 className="text-[11px] font-semibold text-muted uppercase tracking-[0.15em] mb-2">Sources</h3>
               {result.sources.map((src, i) => (
-                <div key={i} style={{
-                  padding: 10, background: '#1a1a1a', borderRadius: 6, marginBottom: 8,
-                  border: '1px solid #262626', fontSize: 13,
-                }}>
-                  <div style={{ fontWeight: 500, color: '#93c5fd' }}>
+                <div key={i} className="p-2.5 mb-2 rounded-lg bg-surface border border-border-subtle text-[13px]">
+                  <div className="font-medium text-accent">
                     {src.file} — {src.section}
                   </div>
-                  <div style={{ color: '#888', marginTop: 4 }}>
+                  <div className="text-muted mt-1">
                     {src.snippet}...
                   </div>
-                  <div style={{ color: '#555', marginTop: 2, fontSize: 11 }}>
+                  <div className="text-muted/70 mt-0.5 text-[11px]">
                     Lines {src.lineRange} · Relevance: {src.score}
                   </div>
                 </div>

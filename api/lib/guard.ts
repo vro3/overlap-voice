@@ -17,9 +17,20 @@ const kv = createClient({
 });
 
 function clientIp(req: VercelRequest): string {
+  // `x-real-ip` is set by Vercel's edge to the true client IP and overwrites any
+  // client-supplied value — trust it first. `x-forwarded-for` is a client-
+  // prependable chain, so the FIRST entry is attacker-controlled; only the LAST
+  // hop (appended by the platform) is trustworthy. Keying on the first entry
+  // would let an attacker rotate the header into unlimited fresh rate buckets.
+  const realIp = req.headers['x-real-ip'];
+  if (typeof realIp === 'string' && realIp.trim()) return realIp.trim();
+
   const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string') return xff.split(',')[0].trim();
-  if (Array.isArray(xff)) return xff[0];
+  const chain = Array.isArray(xff) ? xff.join(',') : xff;
+  if (typeof chain === 'string' && chain.trim()) {
+    const parts = chain.split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1];
+  }
   return (req.socket as { remoteAddress?: string })?.remoteAddress || 'unknown';
 }
 

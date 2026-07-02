@@ -3,6 +3,17 @@ import { Question, InterviewResponse, AppSettings } from '../types';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { processAudioResponse, processTextResponse } from '../services/geminiService';
 
+// crypto.randomUUID is unavailable in non-secure contexts (plain http, some
+// embedded webviews). Fall back to a timestamp+random id so AI mode never throws.
+const newId = (): string => {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch { /* fall through */ }
+  return `resp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
 interface QuestionCardProps {
   question: Question;
   value: string;
@@ -28,7 +39,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const speechBaseRef = useRef(''); // field value captured when the mic starts
-  const [aiStatus, setAiStatus] = useState<'idle' | 'processing' | 'done'>('idle');
+  const [aiStatus, setAiStatus] = useState<'idle' | 'processing' | 'done' | 'error'>('idle');
   const [aiSummary, setAiSummary] = useState(existingResponse?.summary || '');
 
   // Speech recognition for simple mode
@@ -68,7 +79,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
       setAiSummary(result.summary);
       setAiStatus('done');
       onSaveAiResponse?.({
-        id: existingResponse?.id || crypto.randomUUID(),
+        id: existingResponse?.id || newId(),
         questionId: question.id,
         questionText: question.text,
         timestamp: new Date().toISOString(),
@@ -81,7 +92,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
       });
     } catch (err) {
       console.error('AI analysis failed:', err);
-      setAiStatus('idle');
+      setAiStatus('error');
     }
   };
 
@@ -225,11 +236,20 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                     </span>
                   ) : aiStatus === 'done' ? (
                     'Re-analyze'
+                  ) : aiStatus === 'error' ? (
+                    'Try again'
                   ) : (
                     'Analyze with AI'
                   )}
                 </button>
               </div>
+            )}
+
+            {/* AI failure — tell the user rather than silently reverting */}
+            {settings.aiAnalysisEnabled && aiStatus === 'error' && (
+              <p className="mt-2 text-right text-[12px] text-danger">
+                Analysis didn't go through. Check your connection and try again.
+              </p>
             )}
           </div>
 

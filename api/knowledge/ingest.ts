@@ -4,8 +4,18 @@
 import { createClient } from '@vercel/kv';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { chunkByHeaders } from '../../src/lib/chunker.js';
+import crypto from 'node:crypto';
 import fs from 'fs';
 import path from 'path';
+
+// Constant-time bearer check so the secret can't be probed byte-by-byte via timing.
+function bearerMatches(header: string | undefined, secret: string): boolean {
+  const expected = `Bearer ${secret}`;
+  const got = Buffer.from(header || '');
+  const want = Buffer.from(expected);
+  if (got.length !== want.length) return false;
+  return crypto.timingSafeEqual(got, want);
+}
 // ESM package ("type":"module") — use process.cwd() which resolves to /var/task in Vercel
 // includeFiles in vercel.json copies data/documents/ to /var/task/data/documents/
 
@@ -24,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('[Ingest] CRON_SECRET not configured');
     return res.status(500).json({ error: 'Server misconfiguration' });
   }
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!bearerMatches(typeof authHeader === 'string' ? authHeader : undefined, process.env.CRON_SECRET)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

@@ -92,22 +92,23 @@ export function useAutoSave(settings: AppSettings) {
     return null;
   }, []);
 
+  // Resolves to the saved progress, or null when the server confirms there is
+  // no saved data for this email. THROWS on a transport/HTTP/parse failure so
+  // callers can tell "nothing saved" apart from "couldn't reach the server"
+  // (the latter should offer a retry, not silently start the user over).
   const loadProgressFromServer = useCallback(async (email: string): Promise<SavedProgress | null> => {
-    try {
-      const res = await fetch('/api/user/load', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, token: getOwnerToken(email) || undefined }),
-      });
-      const json = await res.json();
-      if (json.token) setOwnerToken(email, json.token); // defensive; load won't normally mint
-      if (json.exists && json.data) {
-        return json.data as SavedProgress;
-      }
-    } catch (e) {
-      console.error('Failed to load progress from server:', e);
+    const res = await fetch('/api/user/load', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, token: getOwnerToken(email) || undefined }),
+    });
+    if (!res.ok) throw new Error(`load failed: ${res.status}`);
+    const json = await res.json();
+    if (json.token) setOwnerToken(email, json.token); // defensive; load won't normally mint
+    if (json.exists && json.data) {
+      return json.data as SavedProgress;
     }
-    return null;
+    return null; // server reached, no saved data for this email
   }, []);
 
   const clearProgress = useCallback(() => {
