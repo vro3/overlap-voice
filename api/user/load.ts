@@ -28,9 +28,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const ownership = await checkOwnership(email, token);
     if (ownership === 'denied') {
-      // A token exists for this email but the caller's doesn't match —
-      // don't reveal the data. (Client falls back to its localStorage copy.)
-      return res.status(200).json({ exists: true, locked: true, data: null });
+      // A token exists for this email but the caller's doesn't match. Return the
+      // same shape as "no data" so probing arbitrary emails can't be used to
+      // enumerate which addresses have saved progress (existence oracle).
+      // (Client falls back to its localStorage copy either way.)
+      return res.status(200).json({ exists: false, locked: false, data: null });
     }
 
     // 'authorized' (token matches) or 'unclaimed' (legacy row, grandfathered).

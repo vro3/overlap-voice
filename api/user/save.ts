@@ -41,16 +41,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Persist the answers FIRST. Only mint the ownership token once the write
+    // has succeeded — otherwise a failed Sheets write would leave a token hash
+    // in KV that no client possesses, permanently locking the email's cloud data.
+    const lastSaved = await saveUserProgress(
+      email,
+      progress as Parameters<typeof saveUserProgress>[1]
+    );
+
     // First save for this email (brand-new or legacy row) claims it and gets a token back.
     let issuedToken: string | undefined;
     if (ownership === 'unclaimed') {
       issuedToken = await claimEmail(email);
     }
-
-    const lastSaved = await saveUserProgress(
-      email,
-      progress as Parameters<typeof saveUserProgress>[1]
-    );
 
     return res.status(200).json({ success: true, lastSaved, token: issuedToken });
   } catch (error) {

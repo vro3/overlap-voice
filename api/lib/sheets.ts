@@ -77,6 +77,23 @@ export async function saveUserProgress(
   );
 
   if (existing) {
+    // Guard against the empty-clobber: never replace a row that already holds
+    // answers with an empty answer set. A client that auto-saves before its
+    // restore has completed would otherwise wipe the user's cloud data.
+    const incomingCount = Object.keys(progress.answers || {}).length;
+    if (incomingCount === 0) {
+      let storedCount = 0;
+      try {
+        storedCount = Object.keys(JSON.parse(existing.get('answers') || '{}')).length;
+      } catch {
+        storedCount = 0;
+      }
+      if (storedCount > 0) {
+        // No-op: keep the existing answers intact.
+        return existing.get('lastSaved') || now;
+      }
+    }
+
     existing.set('routerAnswer', progress.routerAnswer || '');
     existing.set('currentStep', progress.currentStep || '');
     existing.set('currentScreen', progress.currentScreen || '');
